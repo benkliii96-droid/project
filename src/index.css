@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #0a0a15;
+    color: #f0f0f5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a15; }
+  ::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #00c9a0; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-brand-500 to-brand-400 text-slate-900 font-semibold px-6 py-3 rounded-xl transition-all duration-200 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] focus:outline-none;
+  }
+  .btn-secondary {
+    @apply border border-surface-border text-white font-medium px-6 py-3 rounded-xl transition-all duration-200 hover:bg-surface-elevated hover:border-brand-500 focus:outline-none;
+  }
+  .card { @apply bg-surface-card border border-surface-border rounded-2xl p-6 transition-all duration-200; }
+  .card-hover { @apply card hover:border-brand-500/40 cursor-pointer; }
+  .gradient-text { @apply bg-gradient-to-r from-brand-400 to-cyan-300 bg-clip-text text-transparent; }
+  .input-field { @apply w-full bg-surface-elevated border border-surface-border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors duration-200; }
+  .section-label { @apply text-xs font-semibold uppercase tracking-widest text-brand-500; }
+  .glass { @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.animate-in { animation: slideIn 0.4s ease-out forwards; }
+.fade-in { animation: fadeIn 0.5s ease-out forwards; }
+.animate-spin-slow { animation: spin-slow 3s linear infinite; }
+.pulse-ring { animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+.bg-mesh {
+  background-image:
+    radial-gradient(at 40% 20%, rgba(0,201,160,0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(0,136,204,0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(0,201,160,0.05) 0px, transparent 50%);
+}
