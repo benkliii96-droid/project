@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { User, Mail, Calendar, Dumbbell, Target, Activity, Clock, MapPin, Heart, Shield, Star, ChevronRight, Edit3 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { User, Mail, Calendar, Dumbbell, Target, Activity, Clock, MapPin, Heart, Shield, Star, ChevronRight, Lock, Eye, EyeOff, Check, X, Pencil, Camera } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import DashboardLayout from '../components/DashboardLayout'
-import type { QuizData, WorkoutLog } from '../types'
+import type { QuizData } from '../types'
 
 interface ProfileStats {
   totalWorkouts: number
@@ -57,6 +57,23 @@ const durationLabels: Record<string, string> = {
   '60_plus': '60+ minutes',
 }
 
+const sleepLabels: Record<string, string> = {
+  under_5: 'Less than 5 hours',
+  '5_6': '5–6 hours',
+  '6_7': '6–7 hours',
+  '7_8': '7–8 hours',
+  '8_plus': '8+ hours',
+}
+
+const dietLabels: Record<string, string> = {
+  no_restrictions: '🍽️ No restrictions',
+  low_carb: '🥩 Low carb / Keto',
+  vegetarian: '🥗 Vegetarian',
+  vegan: '🌱 Vegan',
+  intermittent: '⏰ Intermittent fasting',
+  mediterranean: '🫒 Mediterranean',
+}
+
 const formatLabels: Record<string, string> = {
   gym: '🏋️ Gym',
   home: '🏠 Home Workouts',
@@ -100,11 +117,81 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<ProfileStats>({ totalWorkouts: 0, streak: 0, totalMinutes: 0, memberSince: null })
   const [loading, setLoading] = useState(true)
 
+  // Name editing state
+  const [editingName, setEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState('')
+  const [nameSaving, setNameSaving] = useState(false)
+  const [nameError, setNameError] = useState('')
+
+  // Avatar state
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarSaving, setAvatarSaving] = useState(false)
+
+  const handleSaveName = async () => {
+    if (!nameValue.trim()) { setNameError('Name cannot be empty'); return }
+    setNameSaving(true)
+    setNameError('')
+    const { error } = await supabase.auth.updateUser({ data: { full_name: nameValue.trim() } })
+    if (!error && user?.id) {
+      await supabase.from('profiles').update({ full_name: nameValue.trim() }).eq('id', user.id)
+    }
+    setNameSaving(false)
+    if (error) { setNameError(error.message) } else { setEditingName(false) }
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarSaving(true)
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const dataUrl = reader.result as string
+      setAvatarUrl(dataUrl)
+      localStorage.setItem('profile_avatar', dataUrl)
+      // Optionally store in Supabase profiles table
+      if (user?.id) {
+        await supabase.from('profiles').update({ avatar_url: dataUrl }).eq('id', user.id)
+      }
+      setAvatarSaving(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Password change state
+  const [pwOpen, setPwOpen] = useState(false)
+  const [pwNew, setPwNew] = useState('')
+  const [pwConfirm, setPwConfirm] = useState('')
+  const [pwShowNew, setPwShowNew] = useState(false)
+  const [pwShowConfirm, setPwShowConfirm] = useState(false)
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwStatus, setPwStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [pwError, setPwError] = useState('')
+
+  const handleChangePassword = async () => {
+    setPwError('')
+    if (pwNew.length < 8) { setPwError('Password must be at least 8 characters.'); return }
+    if (pwNew !== pwConfirm) { setPwError('Passwords do not match.'); return }
+    setPwLoading(true)
+    const { error } = await supabase.auth.updateUser({ password: pwNew })
+    setPwLoading(false)
+    if (error) {
+      setPwError(error.message)
+      setPwStatus('error')
+    } else {
+      setPwStatus('success')
+      setPwNew('')
+      setPwConfirm('')
+      setTimeout(() => { setPwOpen(false); setPwStatus('idle') }, 2000)
+    }
+  }
+
   useEffect(() => {
     const stored = localStorage.getItem('quiz_data')
     if (stored) {
       try { setQuizData(JSON.parse(stored)) } catch { }
     }
+    const savedAvatar = localStorage.getItem('profile_avatar')
+    if (savedAvatar) setAvatarUrl(savedAvatar)
     if (user?.id) {
       loadStats(user.id)
     }
@@ -140,7 +227,7 @@ export default function ProfilePage() {
   }
 
   const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
-  const initials = fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+  const initials = fullName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
   const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null
 
   const bmi = quizData?.heightCm && quizData?.weightKg
@@ -174,14 +261,71 @@ export default function ProfilePage() {
           className="bg-gradient-to-br from-brand-500/10 to-cyan-500/5 border border-brand-500/20 rounded-2xl p-6"
         >
           <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-500 to-cyan-400 flex items-center justify-center text-slate-900 font-bold text-xl shrink-0">
-              {initials}
+            {/* Avatar with upload overlay */}
+            <div className="relative shrink-0 group">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-brand-500 to-cyan-400 flex items-center justify-center text-slate-900 font-bold text-xl">
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  : initials
+                }
+              </div>
+              {/* Upload button */}
+              <label className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                {avatarSaving
+                  ? <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  : <Camera size={16} className="text-white" />
+                }
+                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} disabled={avatarSaving} />
+              </label>
             </div>
+
+            {/* Name + email */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold truncate">{fullName}</h2>
-              <p className="text-slate-400 text-sm truncate">{user?.email}</p>
-              {memberSince && <p className="text-xs text-slate-500 mt-1">Member since {memberSince}</p>}
+              {editingName ? (
+                <div className="space-y-1.5">
+                  <input
+                    autoFocus
+                    value={nameValue}
+                    onChange={e => setNameValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
+                    className="input-field py-1.5 px-3 text-base font-semibold w-full"
+                    placeholder="Your full name"
+                  />
+                  {nameError && <p className="text-xs text-red-400">{nameError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveName}
+                      disabled={nameSaving}
+                      className="flex items-center gap-1 text-xs bg-brand-500 hover:bg-brand-400 text-slate-900 font-semibold px-3 py-1 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {nameSaving ? <div className="w-3 h-3 rounded-full border-2 border-slate-900 border-t-transparent animate-spin" /> : <Check size={12} />}
+                      Save
+                    </button>
+                    <button onClick={() => { setEditingName(false); setNameError('') }} className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-0.5">
+                  <h2 className="text-xl font-bold truncate">{fullName}</h2>
+                  <button
+                    onClick={() => { setNameValue(fullName); setEditingName(true); setNameError('') }}
+                    className="text-slate-500 hover:text-brand-400 transition-colors shrink-0"
+                    title="Edit name"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
+              )}
+              {!editingName && (
+                <>
+                  <p className="text-slate-400 text-sm truncate">{user?.email}</p>
+                  {memberSince && <p className="text-xs text-slate-500 mt-0.5">Member since {memberSince}</p>}
+                </>
+              )}
             </div>
+
             <div className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold ${hasSubscription ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-surface-elevated text-slate-400 border border-surface-border'}`}>
               {hasSubscription ? '✓ Active Plan' : 'Free'}
             </div>
@@ -228,6 +372,8 @@ export default function ProfilePage() {
             <InfoRow label="Training Frequency" value={quizData.trainingFrequency ? `${quizData.trainingFrequency}x per week` : undefined} icon={<Calendar size={14} />} />
             <InfoRow label="Training Environment" value={quizData.trainingFormat ? formatLabels[quizData.trainingFormat] : undefined} icon={<MapPin size={14} />} />
             <InfoRow label="Session Duration" value={quizData.sessionDuration ? durationLabels[quizData.sessionDuration] : undefined} icon={<Clock size={14} />} />
+            <InfoRow label="Sleep per Night" value={quizData.sleepHours ? sleepLabels[quizData.sleepHours] : undefined} icon={<Clock size={14} />} />
+            <InfoRow label="Diet Style" value={quizData.dietType ? dietLabels[quizData.dietType] : undefined} icon={<Star size={14} />} />
           </SectionCard>
         )}
 
@@ -268,6 +414,81 @@ export default function ProfilePage() {
             value={hasSubscription ? 'Active Subscription' : 'No active plan'}
             icon={<Star size={14} />}
           />
+          <div className="py-3">
+            <button
+              onClick={() => { setPwOpen(o => !o); setPwStatus('idle'); setPwError('') }}
+              className="flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300 transition-colors font-medium"
+            >
+              <Lock size={14} />
+              {pwOpen ? 'Cancel password change' : 'Change password'}
+            </button>
+            <AnimatePresence>
+              {pwOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-4 space-y-3">
+                    {pwStatus === 'success' ? (
+                      <div className="flex items-center gap-2 p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl">
+                        <Check size={16} className="text-brand-400" />
+                        <span className="text-sm text-brand-400 font-medium">Password updated successfully!</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="relative">
+                          <input
+                            type={pwShowNew ? 'text' : 'password'}
+                            placeholder="New password (min. 8 characters)"
+                            value={pwNew}
+                            onChange={e => setPwNew(e.target.value)}
+                            className="input-field w-full pr-10 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPwShowNew(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                          >
+                            {pwShowNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={pwShowConfirm ? 'text' : 'password'}
+                            placeholder="Confirm new password"
+                            value={pwConfirm}
+                            onChange={e => setPwConfirm(e.target.value)}
+                            className="input-field w-full pr-10 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPwShowConfirm(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                          >
+                            {pwShowConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        {pwError && (
+                          <div className="flex items-center gap-2 text-xs text-red-400">
+                            <X size={12} /> {pwError}
+                          </div>
+                        )}
+                        <button
+                          onClick={handleChangePassword}
+                          disabled={pwLoading || !pwNew || !pwConfirm}
+                          className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${pwLoading || !pwNew || !pwConfirm ? 'bg-surface-elevated text-slate-600 cursor-not-allowed' : 'btn-primary'}`}
+                        >
+                          {pwLoading ? 'Updating...' : 'Update Password'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </SectionCard>
 
         {/* Retake quiz CTA */}

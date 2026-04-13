@@ -1,27 +1,49 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, CircleCheck as CheckCircle, Dumbbell } from 'lucide-react'
+import { generateWorkoutPlanAI } from '../lib/openai'
 
-const steps = [
-  { label: 'Analyzing body composition & measurements...', delay: 2000 },
-  { label: 'Calculating optimal training load for your age...', delay: 7000 },
-  { label: 'Personalizing nutrition plan & calorie targets...', delay: 13000 },
-  { label: 'Building your complete fitness program...', delay: 19000 },
+const analysisSteps = [
+  { label: 'Analyzing body composition & measurements...', delay: 1500 },
+  { label: 'Calculating optimal training load for your age...', delay: 5000 },
+  { label: 'Personalizing nutrition plan & calorie targets...', delay: 10000 },
+  { label: 'Building your complete fitness program with AI...', delay: 16000 },
+  { label: 'Finalizing your personalized recommendations...', delay: 21000 },
 ]
+
+const DURATION = 26000
 
 export default function AnalyzingPage() {
   const navigate = useNavigate()
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
   const [progress, setProgress] = useState(0)
-  const DURATION = 25000
+  const generationStarted = useRef(false)
 
   useEffect(() => {
-    const timers = steps.map((s, i) =>
+    // Start AI generation in the background immediately
+    if (!generationStarted.current) {
+      generationStarted.current = true
+      const quizData = JSON.parse(localStorage.getItem('quiz_data') || '{}')
+
+      if (quizData.trainingGoal) {
+        generateWorkoutPlanAI(quizData)
+          .then(plan => {
+            localStorage.setItem('ai_workout_plan', JSON.stringify(plan))
+          })
+          .catch(e => console.warn('Background workout generation failed:', e))
+      }
+    }
+
+    // Animate steps
+    const timers = analysisSteps.map((s, i) =>
       setTimeout(() => setCompletedSteps(prev => [...prev, i]), s.delay)
     )
+
+    // Navigate after animation
     const navTimer = setTimeout(() => navigate('/register'), DURATION)
 
+    // Smooth progress bar
     const interval = setInterval(() => {
       setProgress(prev => {
         const next = prev + (100 / (DURATION / 100))
@@ -51,10 +73,10 @@ export default function AnalyzingPage() {
           <div className="absolute w-28 h-28 rounded-full bg-brand-500/5 pulse-ring" />
         </div>
 
-        <h1 className="text-3xl font-bold mb-3">
-          AI is analyzing your profile
-        </h1>
-        <p className="text-slate-400 mb-10">Building your personalized plan. This takes just a moment...</p>
+        <h1 className="text-3xl font-bold mb-3">AI is analyzing your profile</h1>
+        <p className="text-slate-400 mb-10">
+          Building your personalized plan based on your 14 answers...
+        </p>
 
         <div className="w-full bg-surface-elevated rounded-full h-2 mb-10 overflow-hidden">
           <motion.div
@@ -64,7 +86,7 @@ export default function AnalyzingPage() {
         </div>
 
         <div className="space-y-4 text-left">
-          {steps.map((step, i) => (
+          {analysisSteps.map((step, i) => (
             <AnimatePresence key={i}>
               {(completedSteps.includes(i) || i === completedSteps.length) && (
                 <motion.div

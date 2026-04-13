@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Dumbbell, Flame, Activity, Scale, Hop as Hom
 import { useQuiz } from '../contexts/QuizContext'
 import { supabase } from '../lib/supabase'
 
-const TOTAL_STEPS = 12
+const TOTAL_STEPS = 14
 
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
@@ -38,7 +38,7 @@ function Step1({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 1 of 12</div>
+        <div className="section-label mb-2">Step 1 of 14</div>
         <h2 className="text-3xl font-bold mb-2">How old are you?</h2>
         <p className="text-slate-400">We'll tailor your program specifically to your age group and hormonal profile.</p>
       </div>
@@ -89,7 +89,7 @@ function Step2({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 2 of 12</div>
+        <div className="section-label mb-2">Step 2 of 14</div>
         <h2 className="text-3xl font-bold mb-2">Your measurements</h2>
         <p className="text-slate-400">This helps us calculate your caloric needs and create an accurate baseline to track your progress.</p>
       </div>
@@ -159,7 +159,7 @@ function Step3({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 3 of 12</div>
+        <div className="section-label mb-2">Step 3 of 14</div>
         <h2 className="text-3xl font-bold mb-2">What's your main goal?</h2>
         <p className="text-slate-400">Your entire program will be built around this objective. Choose the one that excites you most.</p>
       </div>
@@ -220,7 +220,7 @@ function Step4({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 4 of 12</div>
+        <div className="section-label mb-2">Step 4 of 14</div>
         <h2 className="text-3xl font-bold mb-2">What's driving you?</h2>
         <p className="text-slate-400">Understanding your "why" is the single biggest predictor of long-term success.</p>
       </div>
@@ -260,7 +260,7 @@ function Step5({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 5 of 12</div>
+        <div className="section-label mb-2">Step 5 of 14</div>
         <h2 className="text-3xl font-bold mb-2">What's your body goal?</h2>
         <p className="text-slate-400">Visualize where you want to be in 3–6 months. Be bold — this is your destination.</p>
       </div>
@@ -315,7 +315,7 @@ function Step6({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 6 of 12</div>
+        <div className="section-label mb-2">Step 6 of 14</div>
         <h2 className="text-3xl font-bold mb-2">Your current fitness level?</h2>
         <p className="text-slate-400">Be honest — there are no wrong answers. This calibrates your starting intensity.</p>
       </div>
@@ -371,7 +371,7 @@ function Step7({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 7 of 12</div>
+        <div className="section-label mb-2">Step 7 of 14</div>
         <h2 className="text-3xl font-bold mb-2">What's held you back before?</h2>
         <p className="text-slate-400">Knowing this helps us build a plan that addresses your specific challenge head-on.</p>
       </div>
@@ -410,7 +410,7 @@ function Step8({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 8 of 12</div>
+        <div className="section-label mb-2">Step 8 of 14</div>
         <h2 className="text-3xl font-bold mb-2">How often can you train?</h2>
         <p className="text-slate-400">Choose what's <span className="text-white font-medium">realistic</span> for your schedule. Consistency beats intensity every time.</p>
       </div>
@@ -453,7 +453,7 @@ function Step9({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 9 of 12</div>
+        <div className="section-label mb-2">Step 9 of 14</div>
         <h2 className="text-3xl font-bold mb-2">Where do you train?</h2>
         <p className="text-slate-400">Your workouts will be tailored to your available equipment and environment.</p>
       </div>
@@ -487,7 +487,7 @@ function Step10({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 10 of 12</div>
+        <div className="section-label mb-2">Step 10 of 14</div>
         <h2 className="text-3xl font-bold mb-2">How long per session?</h2>
         <p className="text-slate-400">We'll design workouts that fit perfectly into the time window you actually have available.</p>
       </div>
@@ -523,6 +523,105 @@ function Step10({ quizData, setQuizData }: any) {
 }
 
 function Step11({ quizData, setQuizData }: any) {
+  const [showMessage, setShowMessage] = useState(!!quizData.sleepHours)
+  const options = [
+    { id: 'under_5', icon: '😴', label: 'Less than 5 hours', desc: 'Significantly sleep-deprived' },
+    { id: '5_6', icon: '🌙', label: '5–6 hours', desc: 'Below recommended — affecting recovery' },
+    { id: '6_7', icon: '⭐', label: '6–7 hours', desc: 'Getting close to optimal' },
+    { id: '7_8', icon: '✅', label: '7–8 hours', desc: 'Ideal range for recovery & performance', popular: true },
+    { id: '8_plus', icon: '🏆', label: '8+ hours', desc: 'Excellent sleep foundation' },
+  ]
+
+  const messages: Record<string, string> = {
+    under_5: "Sleep is the #1 recovery tool. Your program will include specific recovery protocols and we'll help you get more from less sleep.",
+    '5_6': "We'll factor this into your training intensity. Even small improvements in sleep can dramatically boost your results.",
+    '6_7': "You're close to optimal. Your program will include recovery-focused strategies to maximize what you've got.",
+    '7_8': "Perfect — this is the sweet spot. You'll recover well between sessions and see faster results.",
+    '8_plus': "Outstanding! Great sleep is a superpower. You're set up for excellent recovery and performance.",
+  }
+
+  const handleSelect = (id: string) => {
+    setQuizData({ sleepHours: id })
+    setShowMessage(true)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="section-label mb-2">Step 11 of 14</div>
+        <h2 className="text-3xl font-bold mb-2">How much do you sleep?</h2>
+        <p className="text-slate-400">Sleep is when your body actually builds muscle and burns fat. It shapes your entire program.</p>
+      </div>
+      <div className="space-y-3">
+        {options.map(o => (
+          <OptionCard key={o.id} selected={quizData.sleepHours === o.id} onClick={() => handleSelect(o.id)}>
+            <div className="flex items-center gap-4">
+              <span className="text-2xl">{o.icon}</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{o.label}</span>
+                  {(o as any).popular && <span className="text-xs bg-brand-500/20 text-brand-400 px-2 py-0.5 rounded-full">Optimal</span>}
+                </div>
+                <div className="text-sm text-slate-400">{o.desc}</div>
+              </div>
+              {quizData.sleepHours === o.id && <Check size={18} className="text-brand-400 shrink-0" />}
+            </div>
+          </OptionCard>
+        ))}
+      </div>
+      <AnimatePresence>
+        {showMessage && quizData.sleepHours && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20">
+            <div className="text-sm text-slate-300">{messages[quizData.sleepHours]}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function Step12({ quizData, setQuizData }: any) {
+  const diets = [
+    { id: 'no_restrictions', icon: '🍽️', label: 'No restrictions', desc: "I eat everything — meat, dairy, grains" },
+    { id: 'low_carb', icon: '🥩', label: 'Low carb / Keto', desc: 'I limit carbohydrates significantly' },
+    { id: 'vegetarian', icon: '🥗', label: 'Vegetarian', desc: 'No meat, but I eat dairy and eggs' },
+    { id: 'vegan', icon: '🌱', label: 'Vegan', desc: 'No animal products at all' },
+    { id: 'intermittent', icon: '⏰', label: 'Intermittent fasting', desc: 'I eat in a restricted time window' },
+    { id: 'mediterranean', icon: '🫒', label: 'Mediterranean', desc: 'Fish, olive oil, vegetables, whole grains' },
+  ]
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="section-label mb-2">Step 12 of 14</div>
+        <h2 className="text-3xl font-bold mb-2">Your eating style?</h2>
+        <p className="text-slate-400">Your nutrition plan will be built around what you already eat — no extreme diets required.</p>
+      </div>
+      <div className="space-y-3">
+        {diets.map(d => (
+          <OptionCard key={d.id} selected={quizData.dietType === d.id} onClick={() => setQuizData({ dietType: d.id })}>
+            <div className="flex items-center gap-4">
+              <span className="text-2xl">{d.icon}</span>
+              <div className="flex-1">
+                <div className="font-semibold">{d.label}</div>
+                <div className="text-sm text-slate-400">{d.desc}</div>
+              </div>
+              {quizData.dietType === d.id && <Check size={18} className="text-brand-400 shrink-0" />}
+            </div>
+          </OptionCard>
+        ))}
+      </div>
+      <AnimatePresence>
+        {quizData.dietType && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-3 bg-surface-elevated border border-surface-border rounded-xl">
+            <div className="text-xs text-slate-400">Your meal plan will be fully compatible with your eating style — practical recipes you'll actually want to eat.</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function Step13({ quizData, setQuizData }: any) {
   const conditions = ['Back pain / disc issues', 'Knee problems', 'Heart condition', 'Hypertension', 'Diabetes', 'Shoulder injury', 'Hip replacement', 'Joint arthritis']
   const selected: string[] = quizData.medicalConditions || []
 
@@ -539,7 +638,7 @@ function Step11({ quizData, setQuizData }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Step 11 of 12</div>
+        <div className="section-label mb-2">Step 13 of 14</div>
         <h2 className="text-3xl font-bold mb-2">Any health considerations?</h2>
         <p className="text-slate-400">This is the most important safety step. Your AI trainer will modify every exercise to keep you safe and effective.</p>
       </div>
@@ -569,7 +668,7 @@ function Step11({ quizData, setQuizData }: any) {
   )
 }
 
-function Step12({ quizData, setQuizData, onSkip }: any) {
+function Step14({ quizData, setQuizData, onSkip }: any) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -589,7 +688,7 @@ function Step12({ quizData, setQuizData, onSkip }: any) {
   return (
     <div className="space-y-6">
       <div>
-        <div className="section-label mb-2">Final Step — 12 of 12</div>
+        <div className="section-label mb-2">Final Step — 14 of 14</div>
         <h2 className="text-3xl font-bold mb-2">You're almost there!</h2>
         <p className="text-slate-400">Optionally upload a progress photo, then let our AI build your personalized plan.</p>
       </div>
@@ -638,7 +737,7 @@ export default function QuizPage() {
   const [direction, setDirection] = useState(1)
   const [loading, setLoading] = useState(false)
 
-  const steps = [Step1, Step2, Step3, Step4, Step5, Step6, Step7, Step8, Step9, Step10, Step11, Step12]
+  const steps = [Step1, Step2, Step3, Step4, Step5, Step6, Step7, Step8, Step9, Step10, Step11, Step12, Step13, Step14]
   const StepComponent = steps[currentStep]
 
   const canProceed = () => {
@@ -652,6 +751,8 @@ export default function QuizPage() {
     if (currentStep === 7) return quizData.trainingFrequency
     if (currentStep === 8) return quizData.trainingFormat
     if (currentStep === 9) return quizData.sessionDuration
+    if (currentStep === 10) return quizData.sleepHours
+    if (currentStep === 11) return quizData.dietType
     return true
   }
 

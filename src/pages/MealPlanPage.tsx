@@ -4,11 +4,12 @@ import { format, addDays, startOfToday } from 'date-fns'
 import { RefreshCw, Flame, Beef, Wheat, Droplets, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { generateMealPlanAI } from '../lib/openai'
 import { generateMealPlan } from '../lib/mockData'
 import DashboardLayout from '../components/DashboardLayout'
 import type { MealPlan, Meal } from '../types'
 
-function MealCard({ meal, onRegenerate }: { meal: Meal; onRegenerate: () => void }) {
+function MealCard({ meal, onRegenerate, regenerating }: { meal: Meal; onRegenerate: () => void; regenerating: boolean }) {
   const [expanded, setExpanded] = useState(false)
   const typeColors: Record<string, string> = {
     breakfast: 'text-yellow-400 bg-yellow-400/10',
@@ -16,14 +17,57 @@ function MealCard({ meal, onRegenerate }: { meal: Meal; onRegenerate: () => void
     dinner: 'text-blue-400 bg-blue-400/10',
     snack: 'text-orange-400 bg-orange-400/10',
   }
+
+  if (regenerating) {
+    return (
+      <div className="card relative overflow-hidden">
+        {/* Shimmer overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-[shimmer_1.5s_infinite] bg-[length:200%_100%]" />
+
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-20 bg-surface-elevated rounded-full animate-pulse" />
+            <div className="h-4 w-12 bg-surface-elevated rounded-full animate-pulse" />
+          </div>
+          <div className="p-1.5">
+            <RefreshCw size={14} className="text-brand-400 animate-spin" />
+          </div>
+        </div>
+
+        <div className="h-5 w-3/4 bg-surface-elevated rounded-lg animate-pulse mb-3" />
+
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {[1, 2, 3, 4].map(n => (
+            <div key={n} className="text-center p-2 bg-surface-elevated rounded-lg animate-pulse">
+              <div className="h-3 w-3 bg-slate-700 rounded-full mx-auto mb-1" />
+              <div className="h-4 w-8 bg-slate-700 rounded mx-auto mb-1" />
+              <div className="h-3 w-6 bg-slate-700 rounded mx-auto" />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-brand-400">
+          <div className="w-3 h-3 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+          <span>AI is generating a new meal for you...</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="card">
+    <motion.div
+      key={meal.name}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="card"
+    >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold capitalize ${typeColors[meal.type] || 'text-slate-400 bg-slate-700'}`}>{meal.type}</span>
           <span className="text-xs text-slate-400">{meal.prepTime}</span>
         </div>
-        <button onClick={onRegenerate} className="p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-500/10 transition-all">
+        <button onClick={onRegenerate} className="p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-500/10 transition-all" title="Regenerate this meal">
           <RefreshCw size={14} />
         </button>
       </div>
@@ -73,7 +117,7 @@ function MealCard({ meal, onRegenerate }: { meal: Meal; onRegenerate: () => void
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   )
 }
 
@@ -82,6 +126,7 @@ export default function MealPlanPage() {
   const [selectedDate, setSelectedDate] = useState(startOfToday())
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
   const [loading, setLoading] = useState(true)
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null)
   const quizData = JSON.parse(localStorage.getItem('quiz_data') || '{}')
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfToday(), i))
@@ -115,8 +160,10 @@ export default function MealPlanPage() {
         }
       }
 
-      const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === dateStr)
-      const generated = generateMealPlan(quizData, dateStr, dayIndex >= 0 ? dayIndex : 0)
+      const generated = await generateMealPlanAI(quizData, dateStr).catch(() => {
+        const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === dateStr)
+        return generateMealPlan(quizData, dateStr, dayIndex >= 0 ? dayIndex : 0)
+      })
       setMealPlan(generated)
 
       if (user) {
@@ -135,10 +182,15 @@ export default function MealPlanPage() {
     }
   }
 
-  const regenerateMeal = (mealIndex: number) => {
-    if (!mealPlan) return
-    const dateIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === mealPlan.date)
-    const newPlan = generateMealPlan(quizData, mealPlan.date, (dateIndex + mealIndex + 3) % 7)
+  const regenerateMeal = async (mealIndex: number) => {
+    if (!mealPlan || regeneratingIndex !== null) return
+    setRegeneratingIndex(mealIndex)
+    try {
+    // Generate a fresh full day plan and take the relevant meal from it
+    const newPlan = await generateMealPlanAI(quizData, mealPlan.date).catch(() => {
+      const dateIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === mealPlan.date)
+      return generateMealPlan(quizData, mealPlan.date, (dateIndex + mealIndex + 3) % 7)
+    })
     const newMeals = [...mealPlan.meals]
     newMeals[mealIndex] = newPlan.meals[mealIndex] || newPlan.meals[0]
     const updated: MealPlan = {
@@ -160,6 +212,9 @@ export default function MealPlanPage() {
         total_carbs: updated.totalCarbs,
         total_fat: updated.totalFat,
       })
+    }
+    } finally {
+      setRegeneratingIndex(null)
     }
   }
 
@@ -230,9 +285,13 @@ export default function MealPlanPage() {
 
             <div className="space-y-4">
               {mealPlan.meals.map((meal, i) => (
-                <motion.div key={`${meal.name}-${i}`} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                  <MealCard meal={meal} onRegenerate={() => regenerateMeal(i)} />
-                </motion.div>
+                <div key={`${meal.type}-${i}`}>
+                  <MealCard
+                    meal={meal}
+                    onRegenerate={() => regenerateMeal(i)}
+                    regenerating={regeneratingIndex === i}
+                  />
+                </div>
               ))}
             </div>
 

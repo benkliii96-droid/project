@@ -24,9 +24,14 @@ export default function LandingPage() {
             </div>
             <span className="font-bold text-lg gradient-text">FitCoach AI</span>
           </div>
-          <button onClick={() => navigate('/quiz')} className="btn-primary text-sm px-4 py-2">
-            Start Free
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/register')} className="btn-secondary text-sm px-4 py-2">
+              Sign In
+            </button>
+            <button onClick={() => navigate('/quiz')} className="btn-primary text-sm px-4 py-2">
+              Start Free
+            </button>
+          </div>
         </div>
       </header>
 
@@ -148,7 +153,7 @@ export default function LandingPage() {
 
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="space-y-6">
             {[
-              { step: '01', title: 'Take the Assessment', desc: 'Answer 9 questions about your goals, fitness level, and health. Takes less than 5 minutes.' },
+              { step: '01', title: 'Take the Assessment', desc: 'Answer 14 questions about your goals, fitness level, health, and lifestyle. Takes 15–20 minutes.' },
               { step: '02', title: 'AI Builds Your Plan', desc: 'Our AI analyzes your profile and creates a fully personalized workout and nutrition program.' },
               { step: '03', title: 'Train & Transform', desc: 'Follow your plan, track progress, and chat with your AI coaches anytime you need guidance.' },
             ].map((item, i) => (

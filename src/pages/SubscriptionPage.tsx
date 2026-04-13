@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { CircleCheck as CheckCircle, Clock, Dumbbell, Brain, Utensils, TrendingUp, MessageCircle, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { generateWorkoutPlanAI } from '../lib/openai'
 import { generateWorkoutPlan, generateWeekMealPlans } from '../lib/mockData'
 
 const ONE_HOUR = 60 * 60
@@ -48,7 +49,11 @@ export default function SubscriptionPage() {
           current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         })
 
-        const plan = generateWorkoutPlan(quizData)
+        // Use pre-generated AI plan from AnalyzingPage, or generate now as fallback
+        const cached = localStorage.getItem('ai_workout_plan')
+        const plan = cached ? JSON.parse(cached) : await generateWorkoutPlanAI(quizData).catch(() => generateWorkoutPlan(quizData))
+        localStorage.removeItem('ai_workout_plan')
+
         await supabase.from('workout_plans').insert({
           user_id: user.id,
           name: plan.name,

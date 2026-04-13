@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Dumbbell, Apple, Brain } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getAgentResponse, agentPersonalities } from '../lib/mockData'
+import { getAgentResponseAI, agentPersonalities } from '../lib/openai'
 import DashboardLayout from '../components/DashboardLayout'
 
 type AgentType = 'trainer' | 'nutritionist' | 'psychologist'
@@ -99,7 +99,11 @@ export default function ChatPage() {
     }
 
     try {
-      const response = await getAgentResponse(activeAgent, text, quizData)
+      // Build conversation history for context (last 20 messages)
+      const history = [...messages, userMsg]
+        .slice(-20)
+        .map(m => ({ role: m.role, content: m.content }))
+      const response = await getAgentResponseAI(activeAgent, history, quizData)
       const assistantMsg: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',

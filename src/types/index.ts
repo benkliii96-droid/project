@@ -11,6 +11,9 @@ export interface QuizData {
   trainingFrequency: number
   trainingFormat: string
   sessionDuration: string
+  sleepHours: string
+  dietType: string
+  stressLevel: string
   medicalConditions: string[]
   medicalNotes: string
   photoUrl: string | null

@@ -1,0 +1,344 @@
+import type { QuizData, WorkoutPlan, MealPlan } from '../types'
+
+const API_KEY = import.meta.env.VITE_OPENAI_API_KEY
+const API_URL = 'https://api.openai.com/v1/chat/completions'
+const MODEL = 'gpt-4o-mini'
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function buildProfile(q: Partial<QuizData>): string {
+  const goalMap: Record<string, string> = {
+    build_muscle: 'Build Muscle & Strength',
+    lose_weight: 'Lose Weight & Burn Fat',
+    recomposition: 'Body Recomposition',
+    improve_fitness: 'Improve Overall Fitness',
+  }
+  const levelMap: Record<string, string> = {
+    beginner: 'Beginner (never trained or took years off)',
+    intermediate: 'Intermediate (some walking / light activity)',
+    advanced: 'Above Average (trains 1-3x/month)',
+    professional: 'Experienced (regular gym-goer 6+ months)',
+  }
+  const sleepMap: Record<string, string> = {
+    under_5: '<5 hours (sleep-deprived)',
+    '5_6': '5-6 hours (below optimal)',
+    '6_7': '6-7 hours (near optimal)',
+    '7_8': '7-8 hours (ideal)',
+    '8_plus': '8+ hours (excellent)',
+  }
+  const dietMap: Record<string, string> = {
+    no_restrictions: 'No dietary restrictions (omnivore)',
+    low_carb: 'Low-carb / Ketogenic',
+    vegetarian: 'Vegetarian (no meat, dairy & eggs ok)',
+    vegan: 'Vegan (no animal products)',
+    intermittent: 'Intermittent Fasting',
+    mediterranean: 'Mediterranean diet',
+  }
+  const durationMap: Record<string, string> = {
+    '20_30': '20-30 minutes',
+    '30_45': '30-45 minutes',
+    '45_60': '45-60 minutes',
+    '60_plus': '60+ minutes',
+  }
+  const motivationMap: Record<string, string> = {
+    family: 'Being there for family & loved ones',
+    health: "Doctor's recommendation / health concern",
+    confidence: 'Personal confidence & self-image',
+    energy: 'Energy & vitality',
+    longevity: 'Long, active independent life',
+  }
+  const obstacleMap: Record<string, string> = {
+    no_time: 'Lack of time',
+    no_motivation: 'Lost motivation / inconsistency',
+    injury: 'Previous injuries',
+    no_guidance: 'No clear plan or direction',
+    nothing: 'First time starting (no prior obstacles)',
+  }
+
+  const bmi =
+    q.heightCm && q.weightKg
+      ? (q.weightKg / Math.pow(q.heightCm / 100, 2)).toFixed(1)
+      : 'N/A'
+
+  return `
+=== USER FITNESS PROFILE ===
+• Age: ${q.age || 'N/A'} years old
+• Gender: ${q.gender || 'N/A'}
+• Height: ${q.heightCm || 'N/A'} cm | Weight: ${q.weightKg || 'N/A'} kg | BMI: ${bmi}
+• Primary Goal: ${goalMap[q.trainingGoal || ''] || q.trainingGoal || 'N/A'}
+• Body Goal: ${q.bodyGoal || 'N/A'}
+• Fitness Level: ${levelMap[q.fitnessLevel || ''] || 'N/A'}
+• Training Frequency: ${q.trainingFrequency || 3}x per week
+• Training Environment: ${q.trainingFormat || 'gym'}
+• Session Duration: ${durationMap[q.sessionDuration || ''] || '30-45 minutes'}
+• Sleep per Night: ${sleepMap[q.sleepHours || ''] || 'N/A'}
+• Diet Style: ${dietMap[q.dietType || ''] || 'No restrictions'}
+• Medical Conditions: ${q.medicalConditions?.filter(c => c !== 'None').join(', ') || 'None reported'}
+• Medical Notes: ${q.medicalNotes || 'None'}
+• Primary Motivation: ${motivationMap[q.primaryMotivation || ''] || 'N/A'}
+• Previous Obstacle: ${obstacleMap[q.previousObstacle || ''] || 'N/A'}
+`.trim()
+}
+
+async function callGPT(
+  messages: { role: string; content: string }[],
+  maxTokens = 2500
+): Promise<string> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({ model: MODEL, messages, temperature: 0.7, max_tokens: maxTokens }),
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`OpenAI ${res.status}: ${err}`)
+  }
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content?.trim() || ''
+}
+
+function parseJSON<T>(raw: string): T {
+  // Strip markdown code fences if present
+  const clean = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim()
+  return JSON.parse(clean)
+}
+
+// ─── Workout Plan ────────────────────────────────────────────────────────────
+
+export async function generateWorkoutPlanAI(quizData: Partial<QuizData>): Promise<WorkoutPlan> {
+  const profile = buildProfile(quizData)
+  const freq = quizData.trainingFrequency || 3
+  const format = quizData.trainingFormat || 'gym'
+
+  const durationMinutes: Record<string, number> = {
+    '20_30': 25, '30_45': 38, '45_60': 52, '60_plus': 70,
+  }
+  const sessionMins = durationMinutes[quizData.sessionDuration || '30_45'] || 38
+
+  const exerciseContext =
+    format === 'gym'
+      ? 'Use gym equipment: dumbbells, barbells, cables, machines, bench. No bodyweight-only exercises.'
+      : format === 'home'
+      ? 'Home setting: bodyweight, resistance bands, light dumbbells only. No gym machines.'
+      : 'Outdoor / calisthenics: park benches, pull-up bars, bodyweight. No gym equipment.'
+
+  const medConditions = quizData.medicalConditions?.filter(c => c !== 'None') || []
+  const safetyNotes =
+    medConditions.length > 0
+      ? `CRITICAL SAFETY: User has ${medConditions.join(', ')}. Modify ALL exercises accordingly. Avoid high-impact moves, heavy spinal loading, or anything contraindicated.`
+      : 'No major medical conditions. Standard age-appropriate safety protocols apply.'
+
+  const system = `You are an elite strength & conditioning coach specializing exclusively in men 50+. You design safe, evidence-based workout programs with joint-friendly progressions. You always include warm-up and cool-down in every session. Respond with ONLY valid JSON — no markdown, no explanation.`
+
+  const user = `${profile}
+
+${safetyNotes}
+${exerciseContext}
+
+Create a 7-day (Monday–Sunday) personalized workout week with exactly ${freq} training day(s) and ${7 - freq} rest day(s). Each training session is ${sessionMins} minutes.
+
+Rules:
+- Every training day MUST start with "Dynamic Warm-Up" and end with "Static Cool-Down" as exercises
+- Include 4–7 exercises per training day (not counting warm-up/cool-down)
+- Rest time between sets: 60-90s for strength, 45-60s for cardio-focused
+- Reps format: "10-12" or "15" or "30 sec" etc.
+- Write detailed instructions (2-3 sentences) mentioning why it's beneficial for men 50+
+- For rest days: set exercises to [], isRest to true, durationMinutes to 0
+
+Respond with ONLY this JSON:
+{
+  "name": "12-Week [Goal] Program",
+  "description": "Personalized 2-sentence description referencing their specific goal, level, and training environment",
+  "weeksDuration": 12,
+  "days": [
+    {
+      "id": "w1",
+      "dayName": "Monday",
+      "focus": "Lower Body & Core",
+      "durationMinutes": ${sessionMins},
+      "isRest": false,
+      "exercises": [
+        {
+          "id": "ex1",
+          "name": "Exercise Name",
+          "sets": 3,
+          "reps": "10-12",
+          "restSeconds": 90,
+          "instructions": "How to perform it. Why it's great for men 50+.",
+          "muscleGroup": "Legs"
+        }
+      ]
+    }
+  ]
+}`
+
+  try {
+    const raw = await callGPT([{ role: 'system', content: system }, { role: 'user', content: user }], 3000)
+    const parsed = parseJSON<Omit<WorkoutPlan, 'id'>>(raw)
+    return { id: `ai-plan-${Date.now()}`, ...parsed }
+  } catch (e) {
+    console.error('AI workout generation failed, using fallback:', e)
+    const { generateWorkoutPlan } = await import('./mockData')
+    return generateWorkoutPlan(quizData)
+  }
+}
+
+// ─── Meal Plan ───────────────────────────────────────────────────────────────
+
+export async function generateMealPlanAI(quizData: Partial<QuizData>, date: string): Promise<MealPlan> {
+  const profile = buildProfile(quizData)
+  const goal = quizData.trainingGoal || 'improve_fitness'
+  const diet = quizData.dietType || 'no_restrictions'
+
+  const calorieTarget: Record<string, string> = {
+    lose_weight: '1750-1950 calories (moderate deficit for fat loss)',
+    build_muscle: '2400-2700 calories (moderate surplus for muscle gain)',
+    recomposition: '2000-2200 calories (maintenance for recomposition)',
+    improve_fitness: '2100-2300 calories (maintenance for performance)',
+  }
+
+  const dietInstructions: Record<string, string> = {
+    no_restrictions: 'Include a variety of proteins: meat, fish, poultry, eggs, dairy.',
+    low_carb: 'STRICT: Max 50g total carbs for the day. High fat, high protein. No grains, no sugar, minimal fruit.',
+    vegetarian: 'No meat or fish. Use eggs, dairy, legumes, and plant proteins as main protein sources.',
+    vegan: 'Zero animal products. Use tofu, tempeh, legumes, seeds, nutritional yeast for protein.',
+    intermittent: 'Skip traditional breakfast. First meal at noon (lunch). Larger dinner. All calories in 8-hour window.',
+    mediterranean: 'Emphasize fish (especially fatty fish), olive oil, vegetables, legumes, whole grains, minimal red meat.',
+  }
+
+  const system = `You are Dr. Elena, a PhD sports nutritionist specializing in metabolic health for men 50+. You create anti-inflammatory, hormone-supporting meal plans that optimize muscle retention, fat loss, and longevity. Every meal should include a note about its specific benefit for men 50+. Respond with ONLY valid JSON — no markdown, no explanation.`
+
+  const user = `${profile}
+
+Calorie target: ${calorieTarget[goal] || calorieTarget.improve_fitness}
+Diet requirement: ${dietInstructions[diet] || dietInstructions.no_restrictions}
+
+Create a complete daily meal plan for ${date}. Include: breakfast, lunch, snack, dinner.
+(If intermittent fasting: first meal = lunch, skip breakfast, include dinner + snack)
+
+Make meals practical, delicious, and easy to prepare. Ingredients must be commonly available.
+Each recipe must end with one sentence about why this meal specifically benefits men 50+ (e.g., testosterone support, anti-inflammatory, bone density, heart health, etc.)
+
+Respond with ONLY this JSON:
+{
+  "totalCalories": 2200,
+  "totalProtein": 165,
+  "totalCarbs": 220,
+  "totalFat": 73,
+  "meals": [
+    {
+      "name": "Meal name",
+      "type": "breakfast",
+      "calories": 420,
+      "protein": 35,
+      "carbs": 45,
+      "fat": 10,
+      "ingredients": ["200g Greek yogurt", "1 cup blueberries", "30g granola"],
+      "recipe": "Step-by-step instructions. Why this meal benefits men 50+.",
+      "prepTime": "10 min"
+    }
+  ]
+}`
+
+  try {
+    const raw = await callGPT([{ role: 'system', content: system }, { role: 'user', content: user }], 2000)
+    const parsed = parseJSON<Omit<MealPlan, 'date'>>(raw)
+    return { date, ...parsed }
+  } catch (e) {
+    console.error('AI meal generation failed, using fallback:', e)
+    const { generateMealPlan } = await import('./mockData')
+    return generateMealPlan(quizData, date)
+  }
+}
+
+export async function generateWeekMealPlansAI(quizData: Partial<QuizData>): Promise<MealPlan[]> {
+  const today = new Date()
+  // Generate 3 days in parallel, then the next 4 — to avoid rate limits
+  const makeDateStr = (i: number) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    return d.toISOString().split('T')[0]
+  }
+  const firstHalf = await Promise.all([0, 1, 2].map(i => generateMealPlanAI(quizData, makeDateStr(i))))
+  const secondHalf = await Promise.all([3, 4, 5, 6].map(i => generateMealPlanAI(quizData, makeDateStr(i))))
+  return [...firstHalf, ...secondHalf]
+}
+
+// ─── AI Chat Agents ──────────────────────────────────────────────────────────
+
+const agentSystemPrompts: Record<string, string> = {
+  trainer: `You are Coach Marcus, an elite personal trainer with 20+ years of experience working exclusively with men over 50. Your expertise:
+- Joint-safe exercise selection and progressive overload for aging bodies
+- Hormonal optimization through training (natural testosterone support)
+- Age-specific recovery protocols (48-72h muscle group rest, sleep quality)
+- Exercise modifications for common conditions (back pain, knee issues, hypertension)
+- Evidence-based periodization for older athletes
+
+Communication style:
+- Direct, encouraging, and knowledgeable — like a trusted coach, not a textbook
+- Give specific, actionable advice with real numbers (sets, reps, rest periods, weights)
+- Always explain the "why" behind recommendations
+- Keep responses concise: 3-6 sentences unless a detailed explanation is requested
+- Reference the user's specific profile details (their goal, level, medical conditions) in your answers`,
+
+  nutritionist: `You are Dr. Elena, a PhD-level sports nutritionist specializing in metabolic health for men 50+. Your expertise:
+- Protein synthesis optimization (1.6-2.2g/kg for muscle retention in older men)
+- Anti-inflammatory nutrition protocols (omega-3s, polyphenols, gut health)
+- Hormonal nutrition (foods that support testosterone, manage cortisol and insulin)
+- Evidence-based supplementation for men 50+ (creatine, vitamin D, magnesium, zinc)
+- Practical meal timing and pre/post-workout nutrition
+
+Communication style:
+- Warm and practical — you translate complex nutrition science into actionable advice
+- Give specific numbers when relevant (grams of protein, specific foods, timing windows)
+- Reference the user's diet style and goals in every answer
+- Keep responses focused: 3-5 sentences with clear takeaways
+- Occasionally mention the evidence base for your recommendations (briefly)`,
+
+  psychologist: `You are Dr. James, a licensed sports psychologist specializing in habit formation and athletic motivation for men 50+. Your expertise:
+- Identity-based habit formation ("I am someone who trains" vs "I should train")
+- Overcoming age-related psychological barriers (imposter syndrome, perfectionism, all-or-nothing thinking)
+- Stress and cortisol management for better recovery and performance
+- Consistency strategies: implementation intentions, habit stacking, accountability systems
+- Motivation science: intrinsic vs extrinsic drivers, goal-setting, self-compassion
+
+Communication style:
+- Warm, genuinely empathetic — you validate feelings before offering strategies
+- Psychologically grounded but accessible (no jargon)
+- Practical: every response should include at least one actionable strategy
+- Conversational and human, not clinical
+- Reference the user's specific motivation and previous obstacles to show you understand their journey`,
+}
+
+export async function getAgentResponseAI(
+  agentType: string,
+  conversationHistory: { role: string; content: string }[],
+  quizData: Partial<QuizData>
+): Promise<string> {
+  const profile = buildProfile(quizData)
+  const basePrompt = agentSystemPrompts[agentType] || agentSystemPrompts.trainer
+
+  const systemMessage = {
+    role: 'system',
+    content: `${basePrompt}
+
+${profile}
+
+Use this profile to personalize every response. When relevant, reference specific details: their age, goal, fitness level, medical conditions, diet, motivation, and obstacles. Never give generic advice that ignores who they are.`,
+  }
+
+  const messages = [systemMessage, ...conversationHistory]
+
+  try {
+    return await callGPT(messages, 600)
+  } catch (e) {
+    console.error('Agent response failed:', e)
+    return "I'm having trouble connecting right now. Please try again in a moment."
+  }
+}
+
+// Re-export agent personalities for intro messages (still used in ChatPage)
+export { agentPersonalities } from './mockData'

@@ -49,6 +49,10 @@
   0% { transform: scale(0.8); opacity: 0.8; }
   100% { transform: scale(1.4); opacity: 0; }
 }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 .animate-in { animation: slideIn 0.4s ease-out forwards; }
 .fade-in { animation: fadeIn 0.5s ease-out forwards; }
 .animate-spin-slow { animation: spin-slow 3s linear infinite; }

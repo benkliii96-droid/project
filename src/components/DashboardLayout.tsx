@@ -55,9 +55,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               `flex items-center gap-3 px-2 mb-2 py-2 rounded-xl transition-all duration-150 ${isActive ? 'bg-brand-500/10 border border-brand-500/20' : 'hover:bg-surface-elevated'}`
             }
           >
-            <div className="w-8 h-8 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">
-              {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-            </div>
+            {(() => {
+              const av = localStorage.getItem('profile_avatar')
+              return av
+                ? <img src={av} alt="avatar" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                : <div className="w-8 h-8 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">
+                    {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                  </div>
+            })()}
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{user?.user_metadata?.full_name || 'User'}</div>
               <div className="text-xs text-slate-500 truncate">{user?.email}</div>
