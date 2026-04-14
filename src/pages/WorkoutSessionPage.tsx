@@ -85,7 +85,7 @@ export default function WorkoutSessionPage() {
 
   useEffect(() => {
     loadPlan()
-    loadWorkoutCount()
+    if (user) loadWorkoutCount()
   }, [user])
 
   useEffect(() => {
@@ -95,9 +95,15 @@ export default function WorkoutSessionPage() {
   }, [timerActive, completed])
 
   const loadPlan = async () => {
-    if (!user) return
-    const { data } = await supabase.from('workout_plans').select('*').eq('user_id', user.id).eq('is_active', true).maybeSingle()
-    if (data) setPlan(data.plan_data as WorkoutPlan)
+    // Try localStorage cache first (avoids maybeSingle duplicate-row issue)
+    const cached = localStorage.getItem('fitcoach_workout_plan')
+    if (cached) { try { setPlan(JSON.parse(cached)); return } catch {} }
+    // Fall back to DB — limit(1) handles duplicate rows
+    const { data: rows } = await supabase
+      .from('workout_plans').select('*')
+      .eq('user_id', user!.id).eq('is_active', true)
+      .order('created_at', { ascending: false }).limit(1)
+    if (rows?.[0]) setPlan(rows[0].plan_data as WorkoutPlan)
   }
 
   const loadWorkoutCount = async () => {
@@ -133,7 +139,8 @@ export default function WorkoutSessionPage() {
     setTimerActive(false)
     const duration = Math.round((Date.now() - startTime) / 60000)
     if (user && workout) {
-      const { data: planData } = await supabase.from('workout_plans').select('id').eq('user_id', user.id).maybeSingle()
+      const { data: planRows } = await supabase.from('workout_plans').select('id').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1)
+      const planData = planRows?.[0]
       await supabase.from('workout_logs').insert({
         user_id: user.id,
         workout_plan_id: planData?.id || null,
