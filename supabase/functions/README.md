@@ -48,34 +48,6 @@ supabase db push
 
 ---
 
-## GitHub Pages deployment
-
-### Add GitHub Secrets
-
-Go to your repo → **Settings → Secrets and variables → Actions → New repository secret**:
-
-| Secret | Value |
-|---|---|
-| `VITE_SUPABASE_URL` | your Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | your Supabase anon key |
-| `VITE_OPENAI_API_KEY` | your OpenAI key |
-| `VITE_PADDLE_TOKEN` | `test_...` or `live_...` |
-| `VITE_PADDLE_TRIAL_PRICE` | `pri_...` |
-| `VITE_PADDLE_MONTHLY_PRICE` | `pri_...` |
-| `VITE_PADDLE_ENV` | `sandbox` or `production` |
-| `VITE_BASE_PATH` | `/` (custom domain) or `/repo-name/` |
-
-### Enable GitHub Pages
-
-Repo → **Settings → Pages** → Source: **GitHub Actions**
-
-### Push to main → auto-deploy
-
-```bash
-git push origin main
-```
-
-The workflow at `.github/workflows/deploy.yml` builds and deploys automatically.
 
 ---
 
