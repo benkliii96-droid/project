@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 
 type ExType = 'squat' | 'pushup' | 'curl' | 'row' | 'hinge' | 'plank' | 'generic'
 
@@ -386,7 +386,7 @@ const LABELS: Record<ExType, string> = {
   generic: 'Controlled movement · full range of motion · breathe',
 }
 
-const FIGURES: Record<ExType, () => JSX.Element> = {
+const FIGURES: Record<ExType, () => React.ReactElement> = {
   squat: SquatFigure, pushup: PushupFigure, curl: CurlFigure,
   row: RowFigure, hinge: HingeFigure, plank: PlankFigure, generic: GenericFigure,
 }
