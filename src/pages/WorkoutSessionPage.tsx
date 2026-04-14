@@ -7,7 +7,6 @@ import { supabase } from '../lib/supabase'
 import { getMotivationalMessage } from '../lib/mockData'
 import type { WorkoutPlan, Exercise } from '../types'
 import DashboardLayout from '../components/DashboardLayout'
-import ExerciseCamera from '../components/ExerciseCamera'
 import ExerciseDemo from '../components/ExerciseDemo'
 
 function RestTimer({ seconds, onFinish }: { seconds: number; onFinish: () => void }) {
@@ -290,13 +289,20 @@ export default function WorkoutSessionPage() {
                   <p className="text-sm text-slate-300 leading-relaxed">{currentEx.instructions}</p>
                 </div>
 
-                {/* Exercise demo animation + live camera tracking */}
+                {/* Exercise demo animation + camera tracking placeholder */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <ExerciseDemo exerciseName={currentEx.name} />
-                  <ExerciseCamera
-                    exerciseName={currentEx.name}
-                    targetReps={typeof currentEx.reps === 'number' ? currentEx.reps : parseInt(currentEx.reps) || 10}
-                  />
+                  <div className="rounded-2xl bg-surface-elevated border border-surface-border flex flex-col items-center justify-center gap-3 p-4 text-center min-h-[180px]">
+                    <div className="w-10 h-10 rounded-full bg-surface-card flex items-center justify-center">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-600">
+                        <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-400">Camera Tracking</p>
+                      <p className="text-xs text-slate-600 mt-1">Coming soon — this feature is currently in development</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
