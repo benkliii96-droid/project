@@ -12,6 +12,10 @@ import ProgressPage from './pages/ProgressPage'
 import ChatPage from './pages/ChatPage'
 import MealPlanPage from './pages/MealPlanPage'
 import ProfilePage from './pages/ProfilePage'
+import PaymentSuccessPage from './pages/PaymentSuccessPage'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
+import RefundPage from './pages/RefundPage'
 
 function ProtectedRoute({ children, requireSub = true }: { children: React.ReactNode; requireSub?: boolean }) {
   const { user, loading, hasSubscription } = useAuth()
@@ -53,6 +57,12 @@ function AppRoutes() {
       <Route path="/dashboard/profile" element={
         <ProtectedRoute><ProfilePage /></ProtectedRoute>
       } />
+      <Route path="/payment/success" element={
+        <ProtectedRoute requireSub={false}><PaymentSuccessPage /></ProtectedRoute>
+      } />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/refund" element={<RefundPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

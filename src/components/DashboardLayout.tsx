@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { Dumbbell, ChartBar as BarChart2, MessageCircle, Apple, Hop as Home, LogOut, Menu, X, User } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -108,10 +108,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
       </div>
 
-      <main className="flex-1 md:ml-60 pt-14 md:pt-0 min-h-screen">
-        <div className="p-6">
+      <main className="flex-1 md:ml-60 pt-14 md:pt-0 min-h-screen flex flex-col">
+        <div className="p-6 flex-1">
           {children}
         </div>
+        <footer className="px-6 pb-6 pt-4 border-t border-surface-border/50 md:ml-0">
+          <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+            This service does not provide medical advice. For health concerns, consult a licensed professional.
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link to="/terms" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Terms of Service</Link>
+            <Link to="/privacy" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Privacy Policy</Link>
+            <Link to="/refund" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Refund Policy</Link>
+          </div>
+        </footer>
       </main>
     </div>
   )

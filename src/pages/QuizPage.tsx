@@ -25,7 +25,7 @@ function OptionCard({ selected, onClick, children, className = '' }: { selected?
   )
 }
 
-function SocialProof({ icon, text }: { icon: React.ReactNode; text: string }) {
+export function SocialProof({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="flex items-center gap-2 text-xs text-slate-400">
       {icon}

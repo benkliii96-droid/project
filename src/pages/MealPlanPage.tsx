@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, addDays, startOfToday } from 'date-fns'
-import { RefreshCw, Flame, Beef, Wheat, Droplets, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react'
+import { RefreshCw, Flame, Beef, Wheat, Droplets, ShoppingCart, ChevronDown, ChevronUp, Camera } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { generateMealPlanAI } from '../lib/openai'
 import { generateMealPlan } from '../lib/mockData'
 import DashboardLayout from '../components/DashboardLayout'
+import FoodAnalyzer from '../components/FoodAnalyzer'
 import type { MealPlan, Meal } from '../types'
 
 function MealCard({ meal, onRegenerate, regenerating }: { meal: Meal; onRegenerate: () => void; regenerating: boolean }) {
@@ -121,62 +122,94 @@ function MealCard({ meal, onRegenerate, regenerating }: { meal: Meal; onRegenera
   )
 }
 
+// localStorage cache — speeds up same-device loads, fallback if DB is unreachable
+const CACHE_PREFIX = 'fitcoach_meal_'
+function cacheKey(dateStr: string) { return CACHE_PREFIX + dateStr }
+function saveToCache(plan: MealPlan) { localStorage.setItem(cacheKey(plan.date), JSON.stringify(plan)) }
+function loadFromCache(dateStr: string): MealPlan | null {
+  try { return JSON.parse(localStorage.getItem(cacheKey(dateStr)) || 'null') } catch { return null }
+}
+function clearCache(dateStr: string) { localStorage.removeItem(cacheKey(dateStr)) }
+
 export default function MealPlanPage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [selectedDate, setSelectedDate] = useState(startOfToday())
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null)
+  const [showFoodAnalyzer, setShowFoodAnalyzer] = useState(false)
   const quizData = JSON.parse(localStorage.getItem('quiz_data') || '{}')
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfToday(), i))
 
   useEffect(() => {
-    loadMealPlan()
-  }, [user, selectedDate])
+    if (!authLoading) loadMealPlan()
+  }, [user, selectedDate, authLoading])
 
   const loadMealPlan = async () => {
     setLoading(true)
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd')
-      if (user) {
-        const { data } = await supabase
-          .from('meal_plans')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('plan_date', dateStr)
-          .maybeSingle()
+      if (!user) { setMealPlan(null); return }
 
-        if (data) {
-          setMealPlan({
-            date: dateStr,
-            totalCalories: data.total_calories,
-            totalProtein: data.total_protein,
-            totalCarbs: data.total_carbs,
-            totalFat: data.total_fat,
-            meals: data.meals as Meal[],
-          })
-          return
+      // 1. Check localStorage cache first — works even without DB access
+      const cached = loadFromCache(dateStr)
+      if (cached) { setMealPlan(cached); return }
+
+      // 2. Fall back to DB — use limit(1) instead of maybeSingle() to handle
+      //    duplicate rows that may have been created by the old upsert bug
+      const { data: rows } = await supabase
+        .from('meal_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('plan_date', dateStr)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const data = rows?.[0] ?? null
+      if (data) {
+        const plan: MealPlan = {
+          date: dateStr,
+          totalCalories: data.total_calories,
+          totalProtein: data.total_protein,
+          totalCarbs: data.total_carbs,
+          totalFat: data.total_fat,
+          meals: data.meals as Meal[],
         }
+        setMealPlan(plan)
+        saveToCache(plan) // populate cache for future reloads
+      } else {
+        // No plan for this date — user will generate manually
+        setMealPlan(null)
       }
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      const generated = await generateMealPlanAI(quizData, dateStr).catch(() => {
-        const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === dateStr)
-        return generateMealPlan(quizData, dateStr, dayIndex >= 0 ? dayIndex : 0)
-      })
+  const generateDay = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd')
+      const dayIndex = weekDays.findIndex(d => format(d, 'yyyy-MM-dd') === dateStr)
+      const generated = await generateMealPlanAI(quizData, dateStr).catch(() =>
+        generateMealPlan(quizData, dateStr, dayIndex >= 0 ? dayIndex : 0)
+      )
       setMealPlan(generated)
-
-      if (user) {
-        await supabase.from('meal_plans').upsert({
-          user_id: user.id,
-          plan_date: dateStr,
-          meals: generated.meals,
-          total_calories: generated.totalCalories,
-          total_protein: generated.totalProtein,
-          total_carbs: generated.totalCarbs,
-          total_fat: generated.totalFat,
-        })
-      }
+      saveToCache(generated)
+      // delete+insert instead of upsert — upsert without a unique constraint creates duplicates
+      await supabase.from('meal_plans').delete().eq('user_id', user.id).eq('plan_date', dateStr)
+      const { error: insertError } = await supabase.from('meal_plans').insert({
+        user_id: user.id,
+        plan_date: dateStr,
+        meals: generated.meals,
+        total_calories: generated.totalCalories,
+        total_protein: generated.totalProtein,
+        total_carbs: generated.totalCarbs,
+        total_fat: generated.totalFat,
+      })
+      if (insertError) console.error('[MealPlan] DB insert failed:', insertError.message)
     } finally {
       setLoading(false)
     }
@@ -202,16 +235,20 @@ export default function MealPlanPage() {
       totalFat: newMeals.reduce((s, m) => s + m.fat, 0),
     }
     setMealPlan(updated)
+    saveToCache(updated)
     if (user) {
-      supabase.from('meal_plans').upsert({
-        user_id: user.id,
-        plan_date: mealPlan.date,
-        meals: updated.meals,
-        total_calories: updated.totalCalories,
-        total_protein: updated.totalProtein,
-        total_carbs: updated.totalCarbs,
-        total_fat: updated.totalFat,
-      })
+      // delete+insert to avoid upsert duplicate issue
+      supabase.from('meal_plans').delete().eq('user_id', user.id).eq('plan_date', mealPlan.date).then(() =>
+        supabase.from('meal_plans').insert({
+          user_id: user.id,
+          plan_date: mealPlan.date,
+          meals: updated.meals,
+          total_calories: updated.totalCalories,
+          total_protein: updated.totalProtein,
+          total_carbs: updated.totalCarbs,
+          total_fat: updated.totalFat,
+        })
+      )
     }
     } finally {
       setRegeneratingIndex(null)
@@ -221,24 +258,32 @@ export default function MealPlanPage() {
   const regenerateDay = async () => {
     if (!user || !mealPlan) return
     setLoading(true)
+    clearCache(mealPlan.date)
     await supabase.from('meal_plans').delete().eq('user_id', user.id).eq('plan_date', mealPlan.date)
-    await loadMealPlan()
+    await generateDay()
   }
 
   const allIngredients = mealPlan?.meals.flatMap(m => m.ingredients) || []
 
   return (
     <DashboardLayout>
+      {showFoodAnalyzer && <FoodAnalyzer onClose={() => setShowFoodAnalyzer(false)} />}
+
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-bold">
             Nutrition Plan
           </motion.h1>
-          {mealPlan && (
-            <button onClick={regenerateDay} className="btn-secondary text-sm py-2 px-4 flex items-center gap-2">
-              <RefreshCw size={14} /> Regenerate Day
+          <div className="flex gap-2">
+            <button onClick={() => setShowFoodAnalyzer(true)} className="btn-secondary text-sm py-2 px-4 flex items-center gap-2">
+              <Camera size={14} /> Scan Food
             </button>
-          )}
+            {mealPlan && (
+              <button onClick={regenerateDay} className="btn-secondary text-sm py-2 px-4 flex items-center gap-2">
+                <RefreshCw size={14} /> Regenerate Day
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -317,6 +362,21 @@ export default function MealPlanPage() {
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-36 bg-surface-card rounded-2xl animate-pulse" />
             ))}
+          </div>
+        )}
+
+        {!loading && !mealPlan && (
+          <div className="card text-center py-12">
+            <div className="w-14 h-14 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
+              <Camera size={24} className="text-brand-400" />
+            </div>
+            <h3 className="font-bold mb-2">No plan for this day</h3>
+            <p className="text-slate-400 text-sm mb-6 max-w-xs mx-auto">
+              Generate an AI-powered meal plan for this date, or scan a meal photo to log it.
+            </p>
+            <button onClick={generateDay} className="btn-primary px-8 py-3 flex items-center gap-2 mx-auto">
+              <RefreshCw size={16} /> Generate Meal Plan
+            </button>
           </div>
         )}
       </div>

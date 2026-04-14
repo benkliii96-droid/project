@@ -7,6 +7,8 @@ import { supabase } from '../lib/supabase'
 import { getMotivationalMessage } from '../lib/mockData'
 import type { WorkoutPlan, Exercise } from '../types'
 import DashboardLayout from '../components/DashboardLayout'
+import ExerciseCamera from '../components/ExerciseCamera'
+import ExerciseDemo from '../components/ExerciseDemo'
 
 function RestTimer({ seconds, onFinish }: { seconds: number; onFinish: () => void }) {
   const [remaining, setRemaining] = useState(seconds)
@@ -283,9 +285,18 @@ export default function WorkoutSessionPage() {
                   </div>
                 </div>
 
-                <div className="p-4 bg-surface-elevated rounded-xl mb-6">
+                <div className="p-4 bg-surface-elevated rounded-xl mb-4">
                   <div className="text-xs text-slate-400 mb-1">Instructions</div>
                   <p className="text-sm text-slate-300 leading-relaxed">{currentEx.instructions}</p>
+                </div>
+
+                {/* Exercise demo animation + live camera tracking */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <ExerciseDemo exerciseName={currentEx.name} />
+                  <ExerciseCamera
+                    exerciseName={currentEx.name}
+                    targetReps={typeof currentEx.reps === 'number' ? currentEx.reps : parseInt(currentEx.reps) || 10}
+                  />
                 </div>
 
                 <div className="space-y-3">

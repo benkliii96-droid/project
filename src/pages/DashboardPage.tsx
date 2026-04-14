@@ -2,11 +2,20 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
-import { Play, Flame, Trophy, Calendar, ChevronRight, Coffee, Dumbbell } from 'lucide-react'
+import { Play, Flame, Trophy, Calendar, ChevronRight, Coffee, Dumbbell, RefreshCw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { generateWorkoutPlanAI } from '../lib/openai'
+import { generateWorkoutPlan } from '../lib/mockData'
 import DashboardLayout from '../components/DashboardLayout'
 import type { WorkoutPlan } from '../types'
+
+// localStorage cache for workout plan — survives logout/reload without DB access
+const WORKOUT_CACHE_KEY = 'fitcoach_workout_plan'
+function saveWorkoutToCache(plan: WorkoutPlan) { localStorage.setItem(WORKOUT_CACHE_KEY, JSON.stringify(plan)) }
+function loadWorkoutFromCache(): WorkoutPlan | null {
+  try { return JSON.parse(localStorage.getItem(WORKOUT_CACHE_KEY) || 'null') } catch { return null }
+}
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -16,6 +25,7 @@ export default function DashboardPage() {
   const [streak, setStreak] = useState(0)
   const [totalWorkouts, setTotalWorkouts] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
   const today = new Date()
   const todayDayName = format(today, 'EEEE')
 
@@ -27,15 +37,27 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const { data: planData } = await supabase
+      // Check localStorage cache first — works even if DB write previously failed
+      const cached = loadWorkoutFromCache()
+      if (cached) setPlan(cached)
+
+      // limit(1) instead of maybeSingle() — handles duplicate rows from old upsert bug
+      const { data: planRows } = await supabase
         .from('workout_plans')
         .select('*')
         .eq('user_id', user!.id)
         .eq('is_active', true)
-        .maybeSingle()
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const planData = planRows?.[0] ?? null
 
       if (planData) {
-        setPlan(planData.plan_data as WorkoutPlan)
+        const dbPlan = planData.plan_data as WorkoutPlan
+        setPlan(dbPlan)
+        saveWorkoutToCache(dbPlan) // keep cache fresh from DB
+      } else if (!cached) {
+        setPlan(null) // genuinely no plan
       }
 
       const { data: logs } = await supabase
@@ -67,6 +89,31 @@ export default function DashboardPage() {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const generatePlan = async () => {
+    if (!user || generating) return
+    setGenerating(true)
+    try {
+      const quizData = JSON.parse(localStorage.getItem('quiz_data') || '{}')
+      const newPlan = await generateWorkoutPlanAI(quizData).catch(() => generateWorkoutPlan(quizData))
+      await supabase.from('workout_plans')
+        .update({ is_active: false })
+        .eq('user_id', user.id)
+      const { error: insertError } = await supabase.from('workout_plans').insert({
+        user_id: user.id,
+        name: newPlan.name,
+        description: newPlan.description,
+        weeks_duration: newPlan.weeksDuration,
+        plan_data: newPlan,
+        is_active: true,
+      })
+      if (insertError) console.error('[WorkoutPlan] DB insert failed:', insertError.message)
+      setPlan(newPlan)
+      saveWorkoutToCache(newPlan) // persist locally so logout/reload doesn't lose the plan
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -187,10 +234,27 @@ export default function DashboardPage() {
         )}
 
         {!plan && (
-          <div className="card text-center py-12">
-            <Dumbbell size={40} className="text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">No workout plan found. Complete the quiz to get your personalized program.</p>
-          </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="card text-center py-12">
+            <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
+              <Dumbbell size={28} className="text-brand-400" />
+            </div>
+            <h3 className="font-bold text-lg mb-2">No workout plan yet</h3>
+            <p className="text-slate-400 text-sm mb-6 max-w-xs mx-auto">
+              {localStorage.getItem('quiz_data')
+                ? 'Generate your personalized AI workout plan based on your assessment.'
+                : 'Your profile data will be loaded automatically. Click below to generate your plan.'}
+            </p>
+            <button
+              onClick={generatePlan}
+              disabled={generating}
+              className="btn-primary px-8 py-3 flex items-center gap-2 mx-auto"
+            >
+              {generating
+                ? <><RefreshCw size={16} className="animate-spin" /> Generating your plan…</>
+                : <><Dumbbell size={16} /> Generate My Plan</>}
+            </button>
+          </motion.div>
         )}
 
         {quizData.trainingGoal && (

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { CircleCheck as CheckCircle, Clock, Dumbbell, Brain, Utensils, TrendingUp, MessageCircle, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { payments, type PlanId } from '../lib/payments'
 import { generateWorkoutPlanAI } from '../lib/openai'
 import { generateWorkoutPlan, generateWeekMealPlans } from '../lib/mockData'
 
@@ -35,52 +36,75 @@ export default function SubscriptionPage() {
   const { user, setHasSubscription } = useAuth()
   const { h, m, s } = useCountdown(ONE_HOUR)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const quizData = JSON.parse(localStorage.getItem('quiz_data') || '{}')
 
-  const activateSubscription = async (mock = false) => {
+  const handleCheckout = async (planId: PlanId) => {
+    if (!user) return
+    setLoading(true)
+    setError('')
+    try {
+      const origin = window.location.origin
+      const { url } = await payments.createCheckout({
+        planId,
+        userId: user.id,
+        email: user.email ?? '',
+        successUrl: `${origin}/payment/success`,
+        cancelUrl: `${origin}/subscription`,
+      })
+      // Paddle opens an overlay — url will be null.
+      // Other providers may return a redirect URL.
+      if (url) window.location.href = url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Payment unavailable. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Test / demo mode (no card required) ────────────────────────────────
+  const activateMock = async () => {
+    if (!user) return
     setLoading(true)
     try {
-      if (user) {
-        await supabase.from('subscriptions').upsert({
+      await supabase.from('subscriptions').upsert({
+        user_id: user.id,
+        plan: 'trial',
+        status: 'active',
+        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+
+      const cached = localStorage.getItem('ai_workout_plan')
+      const plan = cached
+        ? JSON.parse(cached)
+        : await generateWorkoutPlanAI(quizData).catch(() => generateWorkoutPlan(quizData))
+      localStorage.removeItem('ai_workout_plan')
+
+      await supabase.from('workout_plans').insert({
+        user_id: user.id,
+        name: plan.name,
+        description: plan.description,
+        weeks_duration: plan.weeksDuration,
+        plan_data: plan,
+        is_active: true,
+      })
+
+      const mealPlans = generateWeekMealPlans(quizData)
+      for (const mp of mealPlans) {
+        await supabase.from('meal_plans').insert({
           user_id: user.id,
-          plan: mock ? 'trial' : 'premium',
-          status: 'active',
-          trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          plan_date: mp.date,
+          meals: mp.meals,
+          total_calories: mp.totalCalories,
+          total_protein: mp.totalProtein,
+          total_carbs: mp.totalCarbs,
+          total_fat: mp.totalFat,
         })
-
-        // Use pre-generated AI plan from AnalyzingPage, or generate now as fallback
-        const cached = localStorage.getItem('ai_workout_plan')
-        const plan = cached ? JSON.parse(cached) : await generateWorkoutPlanAI(quizData).catch(() => generateWorkoutPlan(quizData))
-        localStorage.removeItem('ai_workout_plan')
-
-        await supabase.from('workout_plans').insert({
-          user_id: user.id,
-          name: plan.name,
-          description: plan.description,
-          weeks_duration: plan.weeksDuration,
-          plan_data: plan,
-          is_active: true,
-        })
-
-        const mealPlans = generateWeekMealPlans(quizData)
-        for (const mp of mealPlans) {
-          await supabase.from('meal_plans').insert({
-            user_id: user.id,
-            plan_date: mp.date,
-            meals: mp.meals,
-            total_calories: mp.totalCalories,
-            total_protein: mp.totalProtein,
-            total_carbs: mp.totalCarbs,
-            total_fat: mp.totalFat,
-          })
-        }
-
-        if (mock) {
-          localStorage.setItem('fitcoach_mock_subscription', 'true')
-        }
-        setHasSubscription(true)
       }
+
+      localStorage.setItem('fitcoach_mock_subscription', 'true')
+      setHasSubscription(true)
       navigate('/dashboard')
     } finally {
       setLoading(false)
@@ -171,12 +195,18 @@ export default function SubscriptionPage() {
             <div className="text-slate-500 text-xs">Then $29/month — cancel anytime</div>
           </div>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
+              {error}
+            </div>
+          )}
+
           <button
-            onClick={() => activateSubscription(false)}
+            onClick={() => handleCheckout('trial')}
             disabled={loading}
             className="btn-primary w-full py-4 text-lg mb-3"
           >
-            {loading ? 'Activating...' : 'Start My Transformation — $9'}
+            {loading ? 'Redirecting to payment…' : 'Start My Transformation — $9'}
           </button>
 
           <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
@@ -188,7 +218,7 @@ export default function SubscriptionPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center">
           <div className="text-slate-600 text-xs mb-3">— or —</div>
           <button
-            onClick={() => activateSubscription(true)}
+            onClick={activateMock}
             disabled={loading}
             className="w-full py-3 rounded-xl border border-dashed border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-500 text-sm transition-all duration-200"
           >

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Dumbbell, Brain, Utensils, TrendingUp, CircleCheck as CheckCircle, ArrowRight, Star, Zap, Shield, Target } from 'lucide-react'
 
@@ -194,17 +194,30 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-surface-border py-10 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-cyan-400 flex items-center justify-center">
-              <Dumbbell size={14} className="text-slate-900" />
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-cyan-400 flex items-center justify-center">
+                <Dumbbell size={14} className="text-slate-900" />
+              </div>
+              <span className="font-bold gradient-text">FitCoach AI</span>
             </div>
-            <span className="font-bold gradient-text">FitCoach AI</span>
+            <div className="text-slate-600 text-sm flex items-center gap-1">
+              <Target size={12} /> Built for men who refuse to slow down
+            </div>
+            <div className="text-slate-600 text-sm">© 2026 FitCoach AI</div>
           </div>
-          <div className="text-slate-600 text-sm flex items-center gap-1">
-            <Target size={12} /> Built for men who refuse to slow down
+
+          <div className="border-t border-surface-border/50 pt-4 space-y-3">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              This service does not provide medical advice. For health concerns, consult a licensed professional.
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link to="/terms" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Terms of Service</Link>
+              <Link to="/privacy" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Privacy Policy</Link>
+              <Link to="/refund" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Refund Policy</Link>
+            </div>
           </div>
-          <div className="text-slate-600 text-sm">© 2024 FitCoach AI</div>
         </div>
       </footer>
     </div>

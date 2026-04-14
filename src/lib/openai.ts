@@ -340,5 +340,61 @@ Use this profile to personalize every response. When relevant, reference specifi
   }
 }
 
+// ─── Food Photo Analysis ─────────────────────────────────────────────────────
+
+export interface FoodAnalysisResult {
+  foodName: string
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber: number
+  portionDescription: string
+  healthScore: number        // 1–10
+  notes: string
+}
+
+export async function analyzeFoodPhotoAI(base64Image: string, mimeType = 'image/jpeg'): Promise<FoodAnalysisResult> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: 400,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: 'low' },
+            },
+            {
+              type: 'text',
+              text: `Analyze the food in this image and estimate its nutritional content for the visible portion.
+Return ONLY valid JSON (no markdown) in this exact shape:
+{
+  "foodName": "string — name of the dish/food",
+  "calories": number,
+  "protein": number,
+  "carbs": number,
+  "fat": number,
+  "fiber": number,
+  "portionDescription": "string — estimated portion size (e.g. '200g' or '1 cup')",
+  "healthScore": number (1-10, 10 = very healthy),
+  "notes": "string — 1-2 sentence nutrition tip or observation"
+}`,
+            },
+          ],
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) throw new Error('Food analysis failed')
+  const data = await res.json()
+  return parseJSON<FoodAnalysisResult>(data.choices[0].message.content)
+}
+
 // Re-export agent personalities for intro messages (still used in ChatPage)
 export { agentPersonalities } from './mockData'
