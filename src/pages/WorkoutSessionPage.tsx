@@ -337,7 +337,9 @@ export default function WorkoutSessionPage() {
                   <div className="p-3 bg-brand-500/5 border border-brand-500/15 rounded-xl mb-4">
                     <div className="text-xs text-brand-400 font-medium mb-1">Weight Recommendation</div>
                     <p className="text-sm text-slate-300">{currentEx.weight}</p>
-                    <p className="text-xs text-slate-500 mt-1">Start lighter if this is your first session. Increase by 5–10% when the last rep feels easy for 2 consecutive sets.</p>
+                    {!/bodyweight|body weight|no weight|resistance band/i.test(currentEx.weight ?? '') && (
+                      <p className="text-xs text-slate-500 mt-1">Start lighter if this is your first session. Increase by 5–10% when the last rep feels easy for 2 consecutive sets.</p>
+                    )}
                   </div>
                 )}
 
