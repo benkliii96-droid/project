@@ -246,9 +246,9 @@ export default function WorkoutSessionPage() {
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
             <ChevronLeft size={20} /> Back
           </button>
-          <div className="flex items-center gap-2 text-brand-400">
-            <Clock size={16} />
-            <span className="font-mono text-sm">{formatTime(elapsedSeconds)}</span>
+          <div className="flex items-center gap-2 bg-surface-elevated border border-surface-border rounded-xl px-4 py-2">
+            <Clock size={16} className="text-brand-400" />
+            <span className="font-mono text-xl font-bold gradient-text tracking-widest">{formatTime(elapsedSeconds)}</span>
           </div>
         </div>
 
