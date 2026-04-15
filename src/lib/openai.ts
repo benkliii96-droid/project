@@ -214,8 +214,8 @@ export async function generateMealPlanAI(quizData: Partial<QuizData>, date: stri
   // recomposition:  1.4–1.6 g/kg — simultaneous fat loss + muscle gain
   // build_muscle:   1.6–2.0 g/kg — maximises muscle protein synthesis
   const proteinRanges: Record<string, [number, number]> = {
-    lose_weight:     [1.2, 1.4],
-    improve_fitness: [1.2, 1.4],
+    lose_weight:     [1.0, 1.1],
+    improve_fitness: [1.0, 1.1],
     recomposition:   [1.4, 1.6],
     build_muscle:    [1.6, 2.0],
   }
