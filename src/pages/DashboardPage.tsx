@@ -203,7 +203,11 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               {plan.days?.map((day) => (
-                <div key={day.id} className={`card flex items-center gap-4 ${day.dayName === todayDayName ? 'border-brand-500/30' : ''}`}>
+                <div
+                  key={day.id}
+                  onClick={() => !day.isRest && navigate(`/dashboard/workout/${day.id}`)}
+                  className={`card flex items-center gap-4 ${day.dayName === todayDayName ? 'border-brand-500/30' : ''} ${!day.isRest ? 'cursor-pointer hover:border-brand-500/40 hover:bg-surface-elevated/30 transition-all duration-200' : ''}`}
+                >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${day.isRest ? 'bg-surface-elevated' : 'bg-brand-500/10'}`}>
                     {day.isRest ? (
                       <Coffee size={20} className="text-slate-600" />
@@ -219,14 +223,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-xs text-slate-400">{day.isRest ? 'Rest & Recovery' : `${day.focus} · ${day.durationMinutes} min`}</div>
                   </div>
-                  {!day.isRest && (
-                    <button
-                      onClick={() => navigate(`/dashboard/workout/${day.id}`)}
-                      className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  )}
+                  {!day.isRest && <ChevronRight size={18} className="text-slate-500 shrink-0" />}
                 </div>
               ))}
             </div>

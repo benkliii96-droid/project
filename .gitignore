@@ -38,3 +38,6 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Client setup docs (contain sensitive credentials)
+CLIENT_SETUP.md

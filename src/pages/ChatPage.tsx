@@ -23,7 +23,7 @@ const agents: { id: AgentType; label: string; icon: typeof Dumbbell; color: stri
 
 const quickReplies: Record<AgentType, string[]> = {
   trainer: ['How many sets should I do?', 'Can I modify an exercise?', 'How do I progress?', 'When should I increase weight?'],
-  nutritionist: ['What should I eat before workout?', 'How much protein do I need?', 'Best supplements for 50+?', 'Can I regenerate my meal plan?'],
+  nutritionist: ['What should I eat before workout?', 'How much protein do I need?', 'Best supplements for 45+?', 'Can I regenerate my meal plan?'],
   psychologist: ["I'm feeling unmotivated", 'How do I stay consistent?', 'I missed a workout', 'How do I track progress?'],
 }
 

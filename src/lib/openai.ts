@@ -131,7 +131,7 @@ export async function generateWorkoutPlanAI(quizData: Partial<QuizData>): Promis
       ? `CRITICAL SAFETY: User has ${medConditions.join(', ')}. Modify ALL exercises accordingly. Avoid high-impact moves, heavy spinal loading, or anything contraindicated.`
       : 'No major medical conditions. Standard age-appropriate safety protocols apply.'
 
-  const system = `You are an elite strength & conditioning coach specializing exclusively in men 50+. You design safe, evidence-based workout programs with joint-friendly progressions. You always include warm-up and cool-down in every session. Respond with ONLY valid JSON — no markdown, no explanation.`
+  const system = `You are an elite strength & conditioning coach specializing in adults 45+. You design safe, evidence-based workout programs with joint-friendly progressions. You always include warm-up and cool-down in every session. Respond with ONLY valid JSON — no markdown, no explanation.`
 
   const user = `${profile}
 
@@ -145,7 +145,7 @@ Rules:
 - Include 4–7 exercises per training day (not counting warm-up/cool-down)
 - Rest time between sets: 60-90s for strength, 45-60s for cardio-focused
 - Reps format: "10-12" or "15" or "30 sec" etc.
-- Write detailed instructions (2-3 sentences) mentioning why it's beneficial for men 50+
+- Write detailed instructions (2-3 sentences) mentioning why it's beneficial for adults 45+
 - For rest days: set exercises to [], isRest to true, durationMinutes to 0
 
 Respond with ONLY this JSON:
@@ -167,8 +167,9 @@ Respond with ONLY this JSON:
           "sets": 3,
           "reps": "10-12",
           "restSeconds": 90,
-          "instructions": "How to perform it. Why it's great for men 50+.",
-          "muscleGroup": "Legs"
+          "instructions": "How to perform it. Why it's great for adults 45+.",
+          "muscleGroup": "Legs",
+          "weight": "15 kg dumbbells / bodyweight / resistance band"
         }
       ]
     }
@@ -193,12 +194,34 @@ export async function generateMealPlanAI(quizData: Partial<QuizData>, date: stri
   const goal = quizData.trainingGoal || 'improve_fitness'
   const diet = quizData.dietType || 'no_restrictions'
 
-  const calorieTarget: Record<string, string> = {
-    lose_weight: '1750-1950 calories (moderate deficit for fat loss)',
-    build_muscle: '2400-2700 calories (moderate surplus for muscle gain)',
-    recomposition: '2000-2200 calories (maintenance for recomposition)',
-    improve_fitness: '2100-2300 calories (maintenance for performance)',
+  // Calculate TDEE-based calorie target personalised to the user's weight, age, and activity
+  const weightKg = quizData.weightKg || 80
+  const heightCm = quizData.heightCm || 175
+  const age = quizData.age || 55
+  const gender = quizData.gender || 'male'
+  const freqN = Number(quizData.trainingFrequency) || 3
+  // Mifflin-St Jeor BMR
+  const bmr = gender === 'female'
+    ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161
+    : 10 * weightKg + 6.25 * heightCm - 5 * age + 5
+  // Activity multiplier (lightly active baseline, bump for frequency)
+  const activityMult = freqN <= 2 ? 1.375 : freqN <= 4 ? 1.55 : 1.725
+  const tdee = Math.round(bmr * activityMult)
+
+  // Protein targets based on goal (evidence-based ranges):
+  // lose_weight:    1.2–1.4 g/kg — preserves muscle on a calorie deficit
+  // improve_fitness: 1.2–1.4 g/kg — supports performance at maintenance
+  // recomposition:  1.4–1.6 g/kg — simultaneous fat loss + muscle gain
+  // build_muscle:   1.6–2.0 g/kg — maximises muscle protein synthesis
+  const proteinRanges: Record<string, [number, number]> = {
+    lose_weight:     [1.2, 1.4],
+    improve_fitness: [1.2, 1.4],
+    recomposition:   [1.4, 1.6],
+    build_muscle:    [1.6, 2.0],
   }
+  const [proteinRatioMin, proteinRatioMax] = proteinRanges[goal] ?? [1.2, 1.4]
+  const proteinMin = Math.round(weightKg * proteinRatioMin)
+  const proteinMax = Math.round(weightKg * proteinRatioMax)
 
   const dietInstructions: Record<string, string> = {
     no_restrictions: 'Include a variety of proteins: meat, fish, poultry, eggs, dairy.',
@@ -209,35 +232,60 @@ export async function generateMealPlanAI(quizData: Partial<QuizData>, date: stri
     mediterranean: 'Emphasize fish (especially fatty fish), olive oil, vegetables, legumes, whole grains, minimal red meat.',
   }
 
-  const system = `You are Dr. Elena, a PhD sports nutritionist specializing in metabolic health for men 50+. You create anti-inflammatory, hormone-supporting meal plans that optimize muscle retention, fat loss, and longevity. Every meal should include a note about its specific benefit for men 50+. Respond with ONLY valid JSON — no markdown, no explanation.`
+  // Compute concrete targets to embed in the prompt so GPT has exact numbers
+  const targetCalLow  = goal === 'lose_weight'    ? tdee - 500
+                      : goal === 'build_muscle'   ? tdee + 200
+                      : goal === 'recomposition'  ? tdee - 150
+                      : tdee - 100
+  const targetCalHigh = goal === 'lose_weight'    ? tdee - 350
+                      : goal === 'build_muscle'   ? tdee + 350
+                      : goal === 'recomposition'  ? tdee + 50
+                      : tdee + 100
+  const targetCal  = Math.round((targetCalLow + targetCalHigh) / 2)
+  // Fat: ~25-30% of calories
+  const targetFat  = Math.round(targetCal * 0.27 / 9)
+  // Carbs: remaining after protein and fat
+  const targetCarbs = Math.round((targetCal - proteinMin * 4 - targetFat * 9) / 4)
+
+  const system = `You are Dr. Elena, a PhD sports nutritionist specializing in metabolic health and body composition for adults 45+. You create practical, science-based meal plans tailored to each user's goals, age, and activity level. Respond with ONLY valid JSON — no markdown, no explanation.`
 
   const user = `${profile}
 
-Calorie target: ${calorieTarget[goal] || calorieTarget.improve_fitness}
+NUTRITION TARGETS (calculated from TDEE ${tdee} kcal):
+- Calories: ${targetCal} kcal (range ${targetCalLow}–${targetCalHigh})
+- Protein: ${proteinMin}–${proteinMax}g (${proteinRatioMin}–${proteinRatioMax} g/kg for goal: ${goal.replace('_', ' ')} — do NOT exceed ${proteinMax}g)
+- Carbs: ~${targetCarbs}g
+- Fat: ~${targetFat}g
 Diet requirement: ${dietInstructions[diet] || dietInstructions.no_restrictions}
 
 Create a complete daily meal plan for ${date}. Include: breakfast, lunch, snack, dinner.
-(If intermittent fasting: first meal = lunch, skip breakfast, include dinner + snack)
+(If intermittent fasting diet: skip breakfast, first meal = lunch)
 
-Make meals practical, delicious, and easy to prepare. Ingredients must be commonly available.
-Each recipe must end with one sentence about why this meal specifically benefits men 50+ (e.g., testosterone support, anti-inflammatory, bone density, heart health, etc.)
+STRICT RULES:
+1. The sum of all meal calories MUST equal exactly ${targetCal} kcal (±30 kcal tolerance).
+2. The sum of all meal protein MUST equal ${proteinMin}–${proteinMax}g total. Do NOT put more than ${proteinMax}g protein in any single day.
+3. The sum of all meal carbs MUST equal approximately ${targetCarbs}g.
+4. The sum of all meal fat MUST equal approximately ${targetFat}g.
+5. Distribute carbs strategically: more carbs at breakfast and lunch (pre/post workout energy), fewer at dinner.
+6. Dinner should be the largest meal by calories but lower in carbs (focus on protein + vegetables + healthy fat).
+7. Make meals practical, delicious, and easy to prepare. Use commonly available ingredients.
 
-Respond with ONLY this JSON:
+Respond with ONLY this JSON (totalCalories/totalProtein/totalCarbs/totalFat MUST be the arithmetic sum of the meals, not estimates):
 {
-  "totalCalories": 2200,
-  "totalProtein": 165,
-  "totalCarbs": 220,
-  "totalFat": 73,
+  "totalCalories": ${targetCal},
+  "totalProtein": ${proteinMin},
+  "totalCarbs": ${targetCarbs},
+  "totalFat": ${targetFat},
   "meals": [
     {
       "name": "Meal name",
       "type": "breakfast",
-      "calories": 420,
+      "calories": 500,
       "protein": 35,
-      "carbs": 45,
-      "fat": 10,
+      "carbs": 55,
+      "fat": 12,
       "ingredients": ["200g Greek yogurt", "1 cup blueberries", "30g granola"],
-      "recipe": "Step-by-step instructions. Why this meal benefits men 50+.",
+      "recipe": "Step-by-step preparation instructions in 3-4 sentences.",
       "prepTime": "10 min"
     }
   ]
@@ -246,7 +294,12 @@ Respond with ONLY this JSON:
   try {
     const raw = await callGPT([{ role: 'system', content: system }, { role: 'user', content: user }], 2000)
     const parsed = parseJSON<Omit<MealPlan, 'date'>>(raw)
-    return { date, ...parsed }
+    // Recalculate totals from actual meals to ensure header always matches
+    const totalCalories = parsed.meals.reduce((s, m) => s + m.calories, 0)
+    const totalProtein  = parsed.meals.reduce((s, m) => s + m.protein, 0)
+    const totalCarbs    = parsed.meals.reduce((s, m) => s + m.carbs, 0)
+    const totalFat      = parsed.meals.reduce((s, m) => s + m.fat, 0)
+    return { date, ...parsed, totalCalories, totalProtein, totalCarbs, totalFat }
   } catch (e) {
     console.error('AI meal generation failed, using fallback:', e)
     const { generateMealPlan } = await import('./mockData')
@@ -270,9 +323,9 @@ export async function generateWeekMealPlansAI(quizData: Partial<QuizData>): Prom
 // ─── AI Chat Agents ──────────────────────────────────────────────────────────
 
 const agentSystemPrompts: Record<string, string> = {
-  trainer: `You are Coach Marcus, an elite personal trainer with 20+ years of experience working exclusively with men over 50. Your expertise:
+  trainer: `You are Coach Marcus, an elite personal trainer with 20+ years of experience working with adults 45+. Your expertise:
 - Joint-safe exercise selection and progressive overload for aging bodies
-- Hormonal optimization through training (natural testosterone support)
+- Hormonal optimization through training (natural hormone support)
 - Age-specific recovery protocols (48-72h muscle group rest, sleep quality)
 - Exercise modifications for common conditions (back pain, knee issues, hypertension)
 - Evidence-based periodization for older athletes
@@ -284,11 +337,11 @@ Communication style:
 - Keep responses concise: 3-6 sentences unless a detailed explanation is requested
 - Reference the user's specific profile details (their goal, level, medical conditions) in your answers`,
 
-  nutritionist: `You are Dr. Elena, a PhD-level sports nutritionist specializing in metabolic health for men 50+. Your expertise:
-- Protein synthesis optimization (1.6-2.2g/kg for muscle retention in older men)
+  nutritionist: `You are Dr. Elena, a PhD-level sports nutritionist specializing in metabolic health for adults 45+. Your expertise:
+- Protein synthesis optimization (1.6-2.2g/kg for muscle retention in older adults)
 - Anti-inflammatory nutrition protocols (omega-3s, polyphenols, gut health)
-- Hormonal nutrition (foods that support testosterone, manage cortisol and insulin)
-- Evidence-based supplementation for men 50+ (creatine, vitamin D, magnesium, zinc)
+- Hormonal nutrition (foods that support hormone balance, manage cortisol and insulin)
+- Evidence-based supplementation for adults 45+ (creatine, vitamin D, magnesium, zinc)
 - Practical meal timing and pre/post-workout nutrition
 
 Communication style:
@@ -298,7 +351,7 @@ Communication style:
 - Keep responses focused: 3-5 sentences with clear takeaways
 - Occasionally mention the evidence base for your recommendations (briefly)`,
 
-  psychologist: `You are Dr. James, a licensed sports psychologist specializing in habit formation and athletic motivation for men 50+. Your expertise:
+  psychologist: `You are Dr. James, a licensed sports psychologist specializing in habit formation and athletic motivation for adults 45+. Your expertise:
 - Identity-based habit formation ("I am someone who trains" vs "I should train")
 - Overcoming age-related psychological barriers (imposter syndrome, perfectionism, all-or-nothing thinking)
 - Stress and cortisol management for better recovery and performance

@@ -110,7 +110,7 @@ export default function AnalyzingPage() {
 
         <div className="mt-12 flex items-center justify-center gap-2 text-slate-600 text-xs">
           <Dumbbell size={12} />
-          <span>FitCoach AI — Personalized for Men 50+</span>
+          <span>FitCoach AI — Personalized for Adults 45+</span>
         </div>
       </motion.div>
     </div>

@@ -45,7 +45,7 @@ function Step1({ quizData, setQuizData }: any) {
       <div className="p-3 bg-brand-500/5 border border-brand-500/15 rounded-xl">
         <div className="flex items-start gap-3">
           <Users size={16} className="text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-slate-300">Over <span className="text-brand-400 font-semibold">50,000 men 50+</span> have transformed their lives with FitCoach AI. You're in great company.</p>
+          <p className="text-xs text-slate-300">Over <span className="text-brand-400 font-semibold">50,000 people 45+</span> have transformed their lives with FitCoach AI. You're in great company.</p>
         </div>
       </div>
       <div>
@@ -57,7 +57,7 @@ function Step1({ quizData, setQuizData }: any) {
           value={quizData.age || ''}
           onChange={e => setQuizData({ age: parseInt(e.target.value) || 0 })}
           className="input-field text-3xl font-bold text-center h-20"
-          placeholder="55"
+          placeholder="e.g. 45"
         />
       </div>
       <div>
@@ -145,8 +145,8 @@ function Step3({ quizData, setQuizData }: any) {
   ]
 
   const motivationMessages: Record<string, string> = {
-    build_muscle: "Great choice! Men over 50 who build muscle improve testosterone levels, bone density, and metabolic rate. Our strength protocols are optimized for exactly this.",
-    lose_weight: "You're in good company — this is the #1 goal among men 50+ in our community. Our science-backed approach has helped thousands shed weight sustainably.",
+    build_muscle: "Great choice! Adults 45+ who build muscle improve hormone levels, bone density, and metabolic rate. Our strength protocols are optimized for exactly this.",
+    lose_weight: "You're in good company — this is the #1 goal among our 45+ community. Our science-backed approach has helped thousands shed weight sustainably.",
     recomposition: "The ultimate transformation goal! It takes more precision, but our AI-driven programming makes it achievable for any fitness level.",
     improve_fitness: "A powerful choice. Improved fitness directly impacts energy, mood, sleep quality, and longevity — everything that makes life worth living.",
   }
@@ -307,7 +307,7 @@ function Step6({ quizData, setQuizData }: any) {
     beginner: { title: "You've got this!", message: "Starting from scratch is the bravest thing you can do. We'll build your foundation safely, step by step. Every champion you've ever admired started exactly where you are today." },
     intermediate: { title: "You have more than you think.", message: "An active lifestyle is a real foundation to build on. We'll channel that energy into structured, progressive training — and the results will surprise you." },
     advanced: { title: "Your consistency will pay off.", message: "You already know how to show up. With a smart, structured program, you'll break through plateaus and reach a whole new level." },
-    professional: { title: "Impressive commitment.", message: "Your experience is a massive advantage. We'll build on your solid base with intelligent programming designed to maximize your results at 50+." },
+    professional: { title: "Impressive commitment.", message: "Your experience is a massive advantage. We'll build on your solid base with intelligent programming designed to maximize your results at 45+." },
   }
 
   const feedback = quizData.fitnessLevel ? feedbackMessages[quizData.fitnessLevel] : null
@@ -356,7 +356,7 @@ function Step7({ quizData, setQuizData }: any) {
   ]
 
   const messages: Record<string, { title: string; body: string }> = {
-    no_time: { title: "Time is no longer an obstacle.", body: "Our programs fit into even the busiest schedules — as little as 20 minutes, 3 days a week. We've built this specifically for men who have real lives to manage." },
+    no_time: { title: "Time is no longer an obstacle.", body: "Our programs fit into even the busiest schedules — as little as 20 minutes, 3 days a week. We've built this specifically for people who have real lives to manage." },
     no_motivation: { title: "Motivation follows action — not the other way around.", body: "You don't need to feel motivated to start. Our daily check-ins, streak tracking, and AI coaches are designed to keep you going even on the days you'd rather stop." },
     injury: { title: "Your safety is our #1 priority.", body: "Every workout in your plan will be modified for your health conditions. We never push through pain — we work around it intelligently." },
     no_guidance: { title: "That changes today.", body: "You now have a complete AI system — workout plans, nutrition guidance, and three specialist coaches — all built specifically around your answers in this quiz." },

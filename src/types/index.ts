@@ -27,6 +27,7 @@ export interface Exercise {
   restSeconds: number
   instructions: string
   muscleGroup: string
+  weight?: string
 }
 
 export interface WorkoutDay {

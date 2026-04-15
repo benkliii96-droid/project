@@ -201,7 +201,12 @@ export default function RegisterPage() {
             {['Google', 'Facebook'].map(provider => (
               <button
                 key={provider}
-                onClick={() => alert(`${provider} sign-in coming soon!`)}
+                onClick={async () => {
+                  await supabase.auth.signInWithOAuth({
+                    provider: provider.toLowerCase() as 'google' | 'facebook',
+                    options: { redirectTo: window.location.origin + '/project/subscription' }
+                  })
+                }}
                 className="btn-secondary py-3 text-sm flex items-center justify-center gap-2"
               >
                 {provider === 'Google' ? (

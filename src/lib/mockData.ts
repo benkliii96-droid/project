@@ -23,7 +23,7 @@ const homeExercises: Exercise[] = [
   { id: 'plank', name: 'Modified Plank', sets: 3, reps: '20-30 sec', restSeconds: 60, instructions: 'On knees and forearms. Body straight from knees to shoulders. Brace core, breathe steadily. Progress to full plank over time.', muscleGroup: 'Core' },
   { id: 'calf2', name: 'Standing Calf Raise', sets: 3, reps: '20', restSeconds: 45, instructions: 'Stand near wall for balance. Rise up on tiptoes, hold 2 seconds, lower slowly. Strengthens calves and improves balance.', muscleGroup: 'Calves' },
   { id: 'step', name: 'Step-Up (Stairs)', sets: 3, reps: '10 each side', restSeconds: 75, instructions: 'Step up with one foot, bring other foot up, step back down. Use handrail for balance if needed. Excellent functional leg exercise.', muscleGroup: 'Legs' },
-  { id: 'stretch', name: 'Hip Flexor Stretch', sets: 2, reps: '30 sec each', restSeconds: 30, instructions: 'Kneel on one knee, other foot forward. Push hips forward gently. Relieves tightness from sitting. Essential for men 50+.', muscleGroup: 'Flexibility' },
+  { id: 'stretch', name: 'Hip Flexor Stretch', sets: 2, reps: '30 sec each', restSeconds: 30, instructions: 'Kneel on one knee, other foot forward. Push hips forward gently. Relieves tightness from sitting. Essential for adults 45+.', muscleGroup: 'Flexibility' },
 ]
 
 const outdoorExercises: Exercise[] = [
@@ -40,7 +40,7 @@ const outdoorExercises: Exercise[] = [
 function selectExercises(format: string, _goal: string, fitnessLevel: string): Exercise[] {
   const basePool = format === 'gym' ? gymExercisesStrength : format === 'home' ? homeExercises : outdoorExercises
   const count = fitnessLevel === 'beginner' ? 4 : fitnessLevel === 'intermediate' ? 5 : fitnessLevel === 'advanced' ? 6 : 7
-  const warmup: Exercise = { id: 'warmup', name: 'Dynamic Warm-Up', sets: 1, reps: '5 min', restSeconds: 0, instructions: 'Arm circles, leg swings, gentle torso rotations, ankle rolls. Gets joints and muscles ready. Never skip this at 50+!', muscleGroup: 'Warm-Up' }
+  const warmup: Exercise = { id: 'warmup', name: 'Dynamic Warm-Up', sets: 1, reps: '5 min', restSeconds: 0, instructions: 'Arm circles, leg swings, gentle torso rotations, ankle rolls. Gets joints and muscles ready. Never skip this at 45+!', muscleGroup: 'Warm-Up' }
   const cooldown: Exercise = { id: 'cooldown', name: 'Static Stretching Cool-Down', sets: 1, reps: '5-10 min', restSeconds: 0, instructions: 'Hold each stretch 30 seconds. Focus on quads, hamstrings, chest, and back. Reduces soreness and improves flexibility.', muscleGroup: 'Cool-Down' }
   return [warmup, ...basePool.slice(0, count), cooldown]
 }
@@ -106,7 +106,7 @@ export function generateWorkoutPlan(quizData: Partial<QuizData>): WorkoutPlan {
   return {
     id: 'plan-1',
     name: `12-Week ${goalName} Program`,
-    description: `A personalized ${goalName.toLowerCase()} program designed for men 50+, optimized for your fitness level and schedule. Joint-friendly exercises with progressive overload.`,
+    description: `A personalized ${goalName.toLowerCase()} program designed for adults 45+, optimized for your fitness level and schedule. Joint-friendly exercises with progressive overload.`,
     weeksDuration: 12,
     days: buildWorkoutDays(quizData),
   }
@@ -140,7 +140,7 @@ const mealDatabase: Meal[][] = [
   [
     { name: 'Protein Pancakes with Fresh Fruit', type: 'breakfast', calories: 430, protein: 36, carbs: 50, fat: 8, ingredients: ['2 eggs', '1 banana', '40g oats', '1 scoop protein powder', 'blueberries', 'maple syrup'], recipe: 'Blend eggs, banana, oats, and protein powder. Cook small pancakes 3 min per side. Top with berries and light drizzle of maple syrup.', prepTime: '15 min' },
     { name: 'Chicken Shawarma Plate', type: 'lunch', calories: 530, protein: 46, carbs: 42, fat: 16, ingredients: ['180g chicken thighs', 'hummus', 'pita bread', 'tabbouleh', 'cucumber', 'tomato', 'tahini sauce', 'lemon'], recipe: 'Marinate chicken in shawarma spices. Grill or bake. Serve with hummus, tabbouleh, and vegetables. Middle Eastern spices have anti-inflammatory properties.', prepTime: '30 min' },
-    { name: 'Edamame with Sea Salt', type: 'snack', calories: 170, protein: 14, carbs: 14, fat: 5, ingredients: ['200g edamame pods', 'sea salt'], recipe: 'Steam or microwave edamame 5 min. Sprinkle sea salt. Plant-based protein and phytoestrogen-balancing soy for hormonal health in men 50+.', prepTime: '5 min' },
+    { name: 'Edamame with Sea Salt', type: 'snack', calories: 170, protein: 14, carbs: 14, fat: 5, ingredients: ['200g edamame pods', 'sea salt'], recipe: 'Steam or microwave edamame 5 min. Sprinkle sea salt. Plant-based protein and phytoestrogen-balancing soy for hormonal health in adults 45+.', prepTime: '5 min' },
     { name: 'Pan-Seared Trout with Cauliflower Mash & Sautéed Kale', type: 'dinner', calories: 510, protein: 42, carbs: 32, fat: 18, ingredients: ['200g rainbow trout', '1 head cauliflower', '200g kale', 'lemon', 'butter', 'garlic', 'almonds'], recipe: 'Pan-sear trout 4 min per side. Steam cauliflower, mash with butter and garlic. Sauté kale with garlic and almonds. Rich in brain-healthy omega-3s.', prepTime: '35 min' },
   ],
   [
@@ -208,7 +208,7 @@ export function getMotivationalMessage(completedWorkouts: number): string {
 const agentPersonalities = {
   trainer: {
     name: 'Coach Marcus',
-    intro: "Hey! I'm Coach Marcus, your personal fitness trainer. I specialize in training men 50+ and helping them achieve results they never thought possible. What would you like to know about your workout program?",
+    intro: "Hey! I'm Coach Marcus, your personal fitness trainer. I specialize in training adults 45+ and helping them achieve results they never thought possible. What would you like to know about your workout program?",
   },
   nutritionist: {
     name: 'Dr. Elena',
@@ -222,18 +222,18 @@ const agentPersonalities = {
 
 const mockResponses: Record<string, string[]> = {
   trainer: [
-    "For men 50+, I always emphasize joint health first. Use the RPE (Rate of Perceived Exertion) scale — aim for 6-7 out of 10 effort. This builds strength while keeping injury risk low.",
+    "For adults 45+, I always emphasize joint health first. Use the RPE (Rate of Perceived Exertion) scale — aim for 6-7 out of 10 effort. This builds strength while keeping injury risk low.",
     "Progressive overload is key. Increase weight by 2-5% only when you can complete all reps with perfect form. Don't rush — slow and steady wins the race after 50.",
     "Recovery is where the gains happen! At your age, you need 48-72 hours between training the same muscle group. Sleep 7-9 hours, and don't skip rest days.",
     "I'd recommend modifying that exercise. Instead of heavy barbell squats, try goblet squats or leg press. Same stimulus, much easier on your knees and lower back.",
     "Your workout plan has been updated! I've incorporated your feedback and adjusted the intensity to match your current fitness level. Always listen to your body.",
   ],
   nutritionist: [
-    "At 50+, protein becomes even more critical. Aim for 1.6-2g per kg of bodyweight to combat muscle loss. Spread it across 4 meals for optimal absorption.",
+    "At 45+, protein becomes even more critical. Aim for 1.6-2g per kg of bodyweight to combat muscle loss. Spread it across 4 meals for optimal absorption.",
     "Anti-inflammatory eating should be a priority. Include fatty fish (salmon, mackerel) 3x per week, colorful vegetables, olive oil, and reduce processed foods.",
     "Pre-workout nutrition: eat a balanced meal 2-3 hours before training. If training in the morning, a banana and coffee works well. Post-workout: protein within 2 hours.",
-    "I've regenerated your meal plan with more variety! Today features Mediterranean-inspired dishes — research shows this dietary pattern is optimal for men over 50.",
-    "Creatine monohydrate is the most researched supplement for men 50+. 5g daily can improve strength, muscle mass, and even cognitive function. Worth discussing with your doctor.",
+    "I've regenerated your meal plan with more variety! Today features Mediterranean-inspired dishes — research shows this dietary pattern is optimal for adults over 45.",
+    "Creatine monohydrate is the most researched supplement for adults 45+. 5g daily can improve strength, muscle mass, and even cognitive function. Worth discussing with your doctor.",
   ],
   psychologist: [
     "Building a habit takes 66 days on average, not 21. Be patient with yourself. Focus on identity-based habits — 'I am someone who exercises' rather than 'I need to exercise.'",

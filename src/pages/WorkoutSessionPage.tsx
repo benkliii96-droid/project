@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Pause, SkipForward, CircleCheck as CheckCircle, Clock, ChevronLeft, Share2, Trophy } from 'lucide-react'
+import { Play, Pause, SkipForward, CircleCheck as CheckCircle, Clock, ChevronLeft, Share2, Trophy, Dumbbell } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getMotivationalMessage } from '../lib/mockData'
 import type { WorkoutPlan, Exercise } from '../types'
 import DashboardLayout from '../components/DashboardLayout'
-import ExerciseDemo from '../components/ExerciseDemo'
 
 function RestTimer({ seconds, onFinish }: { seconds: number; onFinish: () => void }) {
   const [remaining, setRemaining] = useState(seconds)
@@ -81,7 +80,8 @@ export default function WorkoutSessionPage() {
   const [showMilestone, setShowMilestone] = useState(false)
   const [totalCompleted, setTotalCompleted] = useState(0)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [timerActive, setTimerActive] = useState(true)
+  const [timerActive, setTimerActive] = useState(false)
+  const [setStarted, setSetStarted] = useState(false)
 
   useEffect(() => {
     loadPlan()
@@ -116,8 +116,14 @@ export default function WorkoutSessionPage() {
   const exercises: Exercise[] = workout?.exercises || []
   const currentEx = exercises[currentExIdx]
 
+  const handleStartSet = useCallback(() => {
+    setSetStarted(true)
+    setTimerActive(true)
+  }, [])
+
   const handleCompleteSet = useCallback(() => {
     if (!currentEx) return
+    setSetStarted(false)
     if (currentSet < currentEx.sets) {
       setCurrentSet(s => s + 1)
       setShowRest(true)
@@ -217,7 +223,7 @@ export default function WorkoutSessionPage() {
             count={totalCompleted}
             onClose={() => setShowMilestone(false)}
             onShare={() => {
-              const text = `I've completed ${totalCompleted} workouts on FitCoach AI! Building my best body at 50+.`
+              const text = `I've completed ${totalCompleted} workouts on FitCoach AI! Building my best body at 45+.`
               navigator.share ? navigator.share({ text }) : alert(text)
             }}
           />
@@ -231,7 +237,7 @@ export default function WorkoutSessionPage() {
       {showRest && (
         <RestTimer
           seconds={restDuration}
-          onFinish={() => { setShowRest(false); setTimerActive(true) }}
+          onFinish={() => { setShowRest(false); setSetStarted(false) }}
         />
       )}
 
@@ -289,6 +295,12 @@ export default function WorkoutSessionPage() {
                     <div className="text-2xl font-bold gradient-text">{currentEx.restSeconds}s</div>
                     <div className="text-xs text-slate-400">Rest</div>
                   </div>
+                  {currentEx.weight && (
+                    <div className="flex-1 text-center p-3 bg-surface-elevated rounded-xl">
+                      <div className="text-sm font-bold gradient-text leading-tight">{currentEx.weight}</div>
+                      <div className="text-xs text-slate-400">Weight</div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-4 bg-surface-elevated rounded-xl mb-4">
@@ -296,9 +308,17 @@ export default function WorkoutSessionPage() {
                   <p className="text-sm text-slate-300 leading-relaxed">{currentEx.instructions}</p>
                 </div>
 
-                {/* Exercise demo animation + camera tracking placeholder */}
+                {/* Exercise demo + camera tracking — both coming soon */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <ExerciseDemo exerciseName={currentEx.name} />
+                  <div className="rounded-2xl bg-surface-elevated border border-surface-border flex flex-col items-center justify-center gap-3 p-4 text-center min-h-[180px]">
+                    <div className="w-10 h-10 rounded-full bg-surface-card flex items-center justify-center">
+                      <Dumbbell size={18} className="text-slate-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-400">Exercise Demo</p>
+                      <p className="text-xs text-slate-600 mt-1">Coming soon — animation guide is in development</p>
+                    </div>
+                  </div>
                   <div className="rounded-2xl bg-surface-elevated border border-surface-border flex flex-col items-center justify-center gap-3 p-4 text-center min-h-[180px]">
                     <div className="w-10 h-10 rounded-full bg-surface-card flex items-center justify-center">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-600">
@@ -307,16 +327,32 @@ export default function WorkoutSessionPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-400">Camera Tracking</p>
-                      <p className="text-xs text-slate-600 mt-1">Coming soon — this feature is currently in development</p>
+                      <p className="text-xs text-slate-600 mt-1">Coming soon — this feature is in development</p>
                     </div>
                   </div>
                 </div>
 
+                {/* Weight recommendation */}
+                {currentEx.weight && (
+                  <div className="p-3 bg-brand-500/5 border border-brand-500/15 rounded-xl mb-4">
+                    <div className="text-xs text-brand-400 font-medium mb-1">Weight Recommendation</div>
+                    <p className="text-sm text-slate-300">{currentEx.weight}</p>
+                    <p className="text-xs text-slate-500 mt-1">Start lighter if this is your first session. Increase by 5–10% when the last rep feels easy for 2 consecutive sets.</p>
+                  </div>
+                )}
+
                 <div className="space-y-3">
-                  <button onClick={handleCompleteSet} className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-2">
-                    <CheckCircle size={20} />
-                    {currentSet < currentEx.sets ? `Complete Set ${currentSet}` : 'Complete Exercise'}
-                  </button>
+                  {!setStarted ? (
+                    <button onClick={handleStartSet} className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-2">
+                      <Play size={20} />
+                      Start Set {currentSet}
+                    </button>
+                  ) : (
+                    <button onClick={handleCompleteSet} className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-2">
+                      <CheckCircle size={20} />
+                      {currentSet < currentEx.sets ? `Complete Set ${currentSet}` : 'Complete Exercise'}
+                    </button>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -351,7 +387,7 @@ export default function WorkoutSessionPage() {
 
         <div className="flex gap-2 flex-wrap">
           {exercises.map((ex, i) => (
-            <button key={ex.id} onClick={() => { setCurrentExIdx(i); setCurrentSet(1) }}
+            <button key={ex.id} onClick={() => { setCurrentExIdx(i); setCurrentSet(1); setSetStarted(false) }}
               className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${i === currentExIdx ? 'border-brand-500 bg-brand-500/10 text-brand-400' : i < currentExIdx ? 'border-green-500/40 bg-green-500/10 text-green-400' : 'border-surface-border text-slate-500'}`}>
               {ex.muscleGroup}
             </button>
