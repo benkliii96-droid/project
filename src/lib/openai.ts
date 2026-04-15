@@ -232,19 +232,32 @@ export async function generateMealPlanAI(quizData: Partial<QuizData>, date: stri
     mediterranean: 'Emphasize fish (especially fatty fish), olive oil, vegetables, legumes, whole grains, minimal red meat.',
   }
 
-  // Compute concrete targets to embed in the prompt so GPT has exact numbers
-  const targetCalLow  = goal === 'lose_weight'    ? tdee - 500
-                      : goal === 'build_muscle'   ? tdee + 200
-                      : goal === 'recomposition'  ? tdee - 150
-                      : tdee - 100
-  const targetCalHigh = goal === 'lose_weight'    ? tdee - 350
-                      : goal === 'build_muscle'   ? tdee + 350
-                      : goal === 'recomposition'  ? tdee + 50
-                      : tdee + 100
-  const targetCal  = Math.round((targetCalLow + targetCalHigh) / 2)
-  // Fat: ~25-30% of calories
-  const targetFat  = Math.round(targetCal * 0.27 / 9)
-  // Carbs: remaining after protein and fat
+  // Calorie targets per goal (no ranges — single precise value):
+  // lose_weight:     TDEE − 500  (1 lb/week fat loss, safe deficit)
+  // recomposition:   TDEE − 200  (small deficit lets body use fat for energy)
+  // improve_fitness: TDEE        (maintenance — fuel performance, no surplus)
+  // build_muscle:    TDEE + 300  (lean bulk — minimal fat gain)
+  const calOffset: Record<string, number> = {
+    lose_weight:     -500,
+    recomposition:   -200,
+    improve_fitness:  0,
+    build_muscle:    +300,
+  }
+  const targetCal = Math.round(tdee + (calOffset[goal] ?? 0))
+
+  // Fat targets per goal (% of total calories):
+  // lose_weight:     28% — moderate fat preserves hormones on a deficit
+  // recomposition:   27% — balanced
+  // improve_fitness: 27% — balanced
+  // build_muscle:    22% — lower fat leaves more room for carbs (fuel for training)
+  const fatPct: Record<string, number> = {
+    lose_weight:     0.28,
+    recomposition:   0.27,
+    improve_fitness: 0.27,
+    build_muscle:    0.22,
+  }
+  const targetFat   = Math.round(targetCal * (fatPct[goal] ?? 0.27) / 9)
+  // Carbs: whatever is left after protein and fat — highest for muscle building
   const targetCarbs = Math.round((targetCal - proteinMin * 4 - targetFat * 9) / 4)
 
   const system = `You are Dr. Elena, a PhD sports nutritionist specializing in metabolic health and body composition for adults 45+. You create practical, science-based meal plans tailored to each user's goals, age, and activity level. Respond with ONLY valid JSON — no markdown, no explanation.`
@@ -252,7 +265,7 @@ export async function generateMealPlanAI(quizData: Partial<QuizData>, date: stri
   const user = `${profile}
 
 NUTRITION TARGETS (calculated from TDEE ${tdee} kcal):
-- Calories: ${targetCal} kcal (range ${targetCalLow}–${targetCalHigh})
+- Calories: ${targetCal} kcal (TDEE ${tdee} kcal ${calOffset[goal] >= 0 ? '+' : ''}${calOffset[goal] ?? 0})
 - Protein: ${proteinMin}–${proteinMax}g (${proteinRatioMin}–${proteinRatioMax} g/kg for goal: ${goal.replace('_', ' ')} — do NOT exceed ${proteinMax}g)
 - Carbs: ~${targetCarbs}g
 - Fat: ~${targetFat}g
