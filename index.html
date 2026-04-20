@@ -2,17 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      // GitHub Pages SPA — restore path from redirect query param
-      (function() {
-        var p = window.location.search.match(/[?&]p=([^&]*)/);
-        if (p) {
-          window.history.replaceState(null, null,
-            '/' + decodeURIComponent(p[1]) + window.location.hash
-          );
-        }
-      })();
-    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="FitCoach AI — Your personalized AI fitness trainer for men 50+. Custom workout and nutrition plans." />

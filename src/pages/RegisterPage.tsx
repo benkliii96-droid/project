@@ -204,7 +204,7 @@ export default function RegisterPage() {
                 onClick={async () => {
                   await supabase.auth.signInWithOAuth({
                     provider: provider.toLowerCase() as 'google' | 'facebook',
-                    options: { redirectTo: window.location.origin + '/project/subscription' }
+                    options: { redirectTo: window.location.origin + '/subscription' }
                   })
                 }}
                 className="btn-secondary py-3 text-sm flex items-center justify-center gap-2"
