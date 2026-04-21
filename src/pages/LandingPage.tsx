@@ -113,7 +113,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="mb-16 text-center">
             <motion.div variants={fadeUp} className="mb-3 section-label">Testimonials</motion.div>
-            <motion.h2 variants={fadeUp} className="text-4xl font-bold">Real Men, Real Results</motion.h2>
+            <motion.h2 variants={fadeUp} className="text-4xl font-bold">Real People, Real Results</motion.h2>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid gap-6 md:grid-cols-3">

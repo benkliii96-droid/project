@@ -194,7 +194,7 @@ export function getMotivationalMessage(completedWorkouts: number): string {
     "Every rep counts. You're building something incredible.",
     "Consistency beats perfection. You showed up — that's everything.",
     "Your future self is thanking you right now. Keep going.",
-    "Strong men aren't born — they're built one workout at a time.",
+    "Strong bodies aren't born — they're built one workout at a time.",
     "Age is just a number. Your dedication is timeless.",
     "The hardest step is always the first. You've already taken it.",
     "Recovery is progress. Rest well and come back stronger.",
@@ -223,7 +223,7 @@ const agentPersonalities = {
 const mockResponses: Record<string, string[]> = {
   trainer: [
     "For adults 45+, I always emphasize joint health first. Use the RPE (Rate of Perceived Exertion) scale — aim for 6-7 out of 10 effort. This builds strength while keeping injury risk low.",
-    "Progressive overload is key. Increase weight by 2-5% only when you can complete all reps with perfect form. Don't rush — slow and steady wins the race after 50.",
+    "Progressive overload is key. Increase weight by 2-5% only when you can complete all reps with perfect form. Don't rush — slow and steady wins the race after 45.",
     "Recovery is where the gains happen! At your age, you need 48-72 hours between training the same muscle group. Sleep 7-9 hours, and don't skip rest days.",
     "I'd recommend modifying that exercise. Instead of heavy barbell squats, try goblet squats or leg press. Same stimulus, much easier on your knees and lower back.",
     "Your workout plan has been updated! I've incorporated your feedback and adjusted the intensity to match your current fitness level. Always listen to your body.",

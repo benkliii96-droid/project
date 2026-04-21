@@ -205,11 +205,11 @@ function Step4({ quizData, setQuizData }: any) {
   ]
 
   const messages: Record<string, { title: string; body: string }> = {
-    family: { title: "That's the most powerful motivation of all.", body: "Men who train for their loved ones are 3x more likely to stay consistent. Every rep you do is an investment in time with the people who matter most." },
+    family: { title: "That's the most powerful motivation of all.", body: "People who train for their loved ones are 3x more likely to stay consistent. Every rep you do is an investment in time with the people who matter most." },
     health: { title: "You're taking the most important step.", body: "Listening to your doctor and acting on it takes real courage. Exercise is the most evidence-backed tool for long-term health — and you're already ahead of 80% of people." },
     confidence: { title: "You deserve to feel incredible.", body: "There's nothing shallow about wanting to look and feel your best. Self-confidence ripples into every area of life — relationships, career, happiness." },
-    energy: { title: "Life is meant to be lived fully.", body: "Low energy is one of the most common complaints after 50 — and one of the most reversible. The right exercise program can transform how you feel within weeks." },
-    longevity: { title: "The best investment you can make.", body: "Fitness after 50 isn't about vanity — it's about maintaining your independence, vitality, and quality of life for decades to come. You're thinking exactly right." },
+    energy: { title: "Life is meant to be lived fully.", body: "Low energy is one of the most common complaints after 45 — and one of the most reversible. The right exercise program can transform how you feel within weeks." },
+    longevity: { title: "The best investment you can make.", body: "Fitness after 45 isn't about vanity — it's about maintaining your independence, vitality, and quality of life for decades to come. You're thinking exactly right." },
   }
 
   const handleSelect = (id: string) => {
