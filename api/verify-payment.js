@@ -15,35 +15,30 @@ export default async function handler(req, res) {
 
   try {
     const session = await stripe.checkout.sessions.retrieve(session_id)
-    const paid =
-      session.payment_status === 'paid' ||
-      (session.mode === 'subscription' && !!session.subscription)
+    const paid = session.payment_status === 'paid'
 
     if (!paid) return res.status(200).json({ paid: false })
 
     const userId = session.metadata?.supabase_user_id
-    const planId = session.metadata?.plan_id ?? 'trial'
 
     if (userId) {
       const { error: upsertError } = await supabase
         .from('subscriptions')
         .upsert({
           user_id: userId,
-          plan: planId,
+          plan: 'trial',
           status: 'active',
-          trial_ends_at: planId === 'trial'
-            ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-            : null,
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          current_period_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
         }, { onConflict: 'user_id' })
 
       if (upsertError) {
         console.error('[verify-payment] upsert error:', upsertError.message)
-        return res.status(500).json({ error: 'Failed to activate subscription: ' + upsertError.message })
+        return res.status(500).json({ error: 'Failed to activate: ' + upsertError.message })
       }
     }
 
-    res.status(200).json({ paid: true, userId, planId })
+    res.status(200).json({ paid: true, userId })
   } catch (err) {
     console.error('[verify-payment]', err.message)
     res.status(500).json({ error: err.message })

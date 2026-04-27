@@ -144,8 +144,8 @@ export default function SubscriptionPage() {
 
           <div className="text-center py-4">
             <div className="text-5xl font-black gradient-text mb-2">$9</div>
-            <div className="text-slate-400 text-sm mb-1">14-day trial</div>
-            <div className="text-slate-500 text-xs">Then $29/month — cancel anytime</div>
+            <div className="text-slate-400 text-sm mb-1">14-day full access</div>
+            <div className="text-slate-500 text-xs">One-time payment — no hidden charges</div>
           </div>
 
           {error && (
