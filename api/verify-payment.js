@@ -25,16 +25,22 @@ export default async function handler(req, res) {
     const planId = session.metadata?.plan_id ?? 'trial'
 
     if (userId) {
-      await supabase.from('subscriptions').upsert({
-        user_id: userId,
-        plan: planId,
-        status: 'active',
-        trial_ends_at: planId === 'trial'
-          ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-          : null,
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        stripe_session_id: session_id,
-      })
+      const { error: upsertError } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          plan: planId,
+          status: 'active',
+          trial_ends_at: planId === 'trial'
+            ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+            : null,
+          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        }, { onConflict: 'user_id' })
+
+      if (upsertError) {
+        console.error('[verify-payment] upsert error:', upsertError.message)
+        return res.status(500).json({ error: 'Failed to activate subscription: ' + upsertError.message })
+      }
     }
 
     res.status(200).json({ paid: true, userId, planId })

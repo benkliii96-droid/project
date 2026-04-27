@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CircleCheck as CheckCircle, Clock, Dumbbell, Brain, Utensils, TrendingUp, MessageCircle, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
 import { payments, type PlanId } from '../lib/payments'
-import { generateWorkoutPlanAI } from '../lib/openai'
-import { generateWorkoutPlan, generateWeekMealPlans } from '../lib/mockData'
 
 const ONE_HOUR = 60 * 60
 
@@ -33,7 +30,7 @@ function useCountdown(seconds: number) {
 
 export default function SubscriptionPage() {
   const navigate = useNavigate()
-  const { user, subChecked, hasSubscription, setHasSubscription } = useAuth()
+  const { user, subChecked, hasSubscription } = useAuth()
   const { h, m, s } = useCountdown(ONE_HOUR)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -66,54 +63,6 @@ export default function SubscriptionPage() {
     }
   }
 
-  // ── Test / demo mode (no card required) ────────────────────────────────
-  const activateMock = async () => {
-    if (!user) return
-    setLoading(true)
-    try {
-      await supabase.from('subscriptions').upsert({
-        user_id: user.id,
-        plan: 'trial',
-        status: 'active',
-        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-
-      const cached = localStorage.getItem('ai_workout_plan')
-      const plan = cached
-        ? JSON.parse(cached)
-        : await generateWorkoutPlanAI(quizData).catch(() => generateWorkoutPlan(quizData))
-      localStorage.removeItem('ai_workout_plan')
-
-      await supabase.from('workout_plans').insert({
-        user_id: user.id,
-        name: plan.name,
-        description: plan.description,
-        weeks_duration: plan.weeksDuration,
-        plan_data: plan,
-        is_active: true,
-      })
-
-      const mealPlans = generateWeekMealPlans(quizData)
-      for (const mp of mealPlans) {
-        await supabase.from('meal_plans').insert({
-          user_id: user.id,
-          plan_date: mp.date,
-          meals: mp.meals,
-          total_calories: mp.totalCalories,
-          total_protein: mp.totalProtein,
-          total_carbs: mp.totalCarbs,
-          total_fat: mp.totalFat,
-        })
-      }
-
-      localStorage.setItem('fitcoach_mock_subscription', 'true')
-      setHasSubscription(true)
-      navigate('/dashboard')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const features = [
     { icon: Brain, label: 'AI Personal Trainer', desc: 'Workouts personalized to your age and fitness level' },

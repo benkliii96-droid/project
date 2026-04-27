@@ -24,8 +24,13 @@ export default function PaymentSuccessPage() {
       const verify = async () => {
         try {
           const res = await fetch(`/api/verify-payment?session_id=${sessionId}`)
-          const { paid } = await res.json()
-          if (paid) {
+          const data = await res.json()
+          if (!res.ok) {
+            console.error('[verify-payment] server error:', data.error)
+            setStatus('timeout')
+            return
+          }
+          if (data.paid) {
             setStatus('activating')
             await provisionUserData()
             setHasSubscription(true)
@@ -34,7 +39,8 @@ export default function PaymentSuccessPage() {
           } else {
             setStatus('timeout')
           }
-        } catch {
+        } catch (e) {
+          console.error('[verify-payment] fetch error:', e)
           setStatus('timeout')
         }
       }
