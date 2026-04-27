@@ -23,11 +23,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [hasSubscription, setHasSubscription] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        checkSubscription(session.user.id)
+        await checkSubscription(session.user.id)
       }
       setLoading(false)
     })
