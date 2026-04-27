@@ -50,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const checkSubscription = async (userId: string) => {
+    setSubChecked(false)
     try {
       const mockSub = localStorage.getItem('fitcoach_mock_subscription')
       if (mockSub === 'true') {
@@ -63,7 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .limit(1)
         if (error) console.error('[checkSubscription] query error:', error.message)
         const status = rows?.[0]?.status
-        console.log('[checkSubscription] userId:', userId, 'status:', status, 'rows:', rows)
         setHasSubscription(status === 'active' || status === 'trial')
       }
     } catch (e) {
