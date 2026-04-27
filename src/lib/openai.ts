@@ -1,7 +1,5 @@
 import type { QuizData, WorkoutPlan, MealPlan } from '../types'
 
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY
-const API_URL = 'https://api.openai.com/v1/chat/completions'
 const MODEL = 'gpt-4o-mini'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -81,20 +79,18 @@ function buildProfile(q: Partial<QuizData>): string {
 }
 
 async function callGPT(
-  messages: { role: string; content: string }[],
-  maxTokens = 2500
+  messages: { role: string; content: unknown }[],
+  maxTokens = 2500,
+  model = MODEL
 ): Promise<string> {
-  const res = await fetch(API_URL, {
+  const res = await fetch('/api/ai', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({ model: MODEL, messages, temperature: 0.7, max_tokens: maxTokens }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
   })
   if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`OpenAI ${res.status}: ${err}`)
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(`OpenAI ${res.status}: ${err.error}`)
   }
   const data = await res.json()
   return data.choices?.[0]?.message?.content?.trim() || ''
@@ -421,23 +417,17 @@ export interface FoodAnalysisResult {
 }
 
 export async function analyzeFoodPhotoAI(base64Image: string, mimeType = 'image/jpeg'): Promise<FoodAnalysisResult> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      max_tokens: 400,
-      messages: [
+  const messages = [
+    {
+      role: 'user',
+      content: [
         {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: 'low' },
-            },
-            {
-              type: 'text',
-              text: `Analyze the food in this image and estimate its nutritional content for the visible portion.
+          type: 'image_url',
+          image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: 'low' },
+        },
+        {
+          type: 'text',
+          text: `Analyze the food in this image and estimate its nutritional content for the visible portion.
 Return ONLY valid JSON (no markdown) in this exact shape:
 {
   "foodName": "string — name of the dish/food",
@@ -450,16 +440,12 @@ Return ONLY valid JSON (no markdown) in this exact shape:
   "healthScore": number (1-10, 10 = very healthy),
   "notes": "string — 1-2 sentence nutrition tip or observation"
 }`,
-            },
-          ],
         },
       ],
-    }),
-  })
-
-  if (!res.ok) throw new Error('Food analysis failed')
-  const data = await res.json()
-  return parseJSON<FoodAnalysisResult>(data.choices[0].message.content)
+    },
+  ]
+  const raw = await callGPT(messages, 400, 'gpt-4o')
+  return parseJSON<FoodAnalysisResult>(raw)
 }
 
 // Re-export agent personalities for intro messages (still used in ChatPage)
