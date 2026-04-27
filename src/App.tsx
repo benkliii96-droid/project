@@ -18,8 +18,8 @@ import PrivacyPage from './pages/PrivacyPage'
 import RefundPage from './pages/RefundPage'
 
 function ProtectedRoute({ children, requireSub = true }: { children: React.ReactNode; requireSub?: boolean }) {
-  const { user, loading, hasSubscription } = useAuth()
-  if (loading) return (
+  const { user, loading, subChecked, hasSubscription } = useAuth()
+  if (loading || !subChecked) return (
     <div className="min-h-screen bg-[#0a0a15] flex items-center justify-center">
       <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
     </div>

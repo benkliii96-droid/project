@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  subChecked: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasSubscription, setHasSubscription] = useState(false)
+  const [subChecked, setSubChecked] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -28,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null)
       if (session?.user) {
         await checkSubscription(session.user.id)
+      } else {
+        setSubChecked(true)
       }
       setLoading(false)
     })
@@ -51,17 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mockSub === 'true') {
         setHasSubscription(true)
       } else {
-        const { data: rows } = await supabase
+        const { data: rows, error } = await supabase
           .from('subscriptions')
           .select('status')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(1)
+        if (error) console.error('[checkSubscription] query error:', error.message)
         const status = rows?.[0]?.status
+        console.log('[checkSubscription] userId:', userId, 'status:', status, 'rows:', rows)
         setHasSubscription(status === 'active' || status === 'trial')
       }
     } catch (e) {
-      console.error('[checkSubscription]', e)
+      console.error('[checkSubscription] exception:', e)
+    } finally {
+      setSubChecked(true)
     }
 
     // Always restore quiz data from DB on login — localStorage may contain
@@ -147,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, hasSubscription, setHasSubscription }}>
+    <AuthContext.Provider value={{ user, session, loading, subChecked, signIn, signUp, signOut, hasSubscription, setHasSubscription }}>
       {children}
     </AuthContext.Provider>
   )
