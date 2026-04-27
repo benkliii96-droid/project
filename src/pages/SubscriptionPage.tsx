@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { CircleCheck as CheckCircle, Clock, Dumbbell, Brain, Utensils, TrendingUp, MessageCircle, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { payments, type PlanId } from '../lib/payments'
+import { supabase } from '../lib/supabase'
 
 const ONE_HOUR = 60 * 60
 
@@ -34,11 +35,24 @@ export default function SubscriptionPage() {
   const { h, m, s } = useCountdown(ONE_HOUR)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isRenewal, setIsRenewal] = useState(false)
   const quizData = JSON.parse(localStorage.getItem('quiz_data') || '{}')
 
   useEffect(() => {
     if (subChecked && hasSubscription) navigate('/dashboard', { replace: true })
   }, [subChecked, hasSubscription])
+
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('subscriptions')
+      .select('status')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.status) setIsRenewal(true)
+      })
+  }, [user])
 
   const handleCheckout = async (planId: PlanId) => {
     if (!user) return
@@ -130,21 +144,23 @@ export default function SubscriptionPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card border-brand-500/40 mb-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent pointer-events-none" />
 
-          <div className="flex items-center gap-2 mb-4">
-            <Clock size={16} className="text-amber-400" />
-            <span className="text-sm text-amber-400 font-medium">Special offer expires in:</span>
-            <div className="flex gap-1 ml-auto">
-              {[h.toString().padStart(2,'0'), m.toString().padStart(2,'0'), s.toString().padStart(2,'0')].map((t, i) => (
-                <span key={i} className={`bg-surface-elevated border border-surface-border rounded-lg px-2 py-1 font-mono text-sm font-bold ${i < 2 ? 'mr-1' : ''}`}>
-                  {t}
-                </span>
-              ))}
+          {!isRenewal && (
+            <div className="flex items-center gap-2 mb-4">
+              <Clock size={16} className="text-amber-400" />
+              <span className="text-sm text-amber-400 font-medium">Special offer expires in:</span>
+              <div className="flex gap-1 ml-auto">
+                {[h.toString().padStart(2,'0'), m.toString().padStart(2,'0'), s.toString().padStart(2,'0')].map((t, i) => (
+                  <span key={i} className={`bg-surface-elevated border border-surface-border rounded-lg px-2 py-1 font-mono text-sm font-bold ${i < 2 ? 'mr-1' : ''}`}>
+                    {t}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="text-center py-4">
-            <div className="text-5xl font-black gradient-text mb-2">$9</div>
-            <div className="text-slate-400 text-sm mb-1">14-day full access</div>
+            <div className="text-5xl font-black gradient-text mb-2">{isRenewal ? '$29' : '$9'}</div>
+            <div className="text-slate-400 text-sm mb-1">30-day full access</div>
             <div className="text-slate-500 text-xs">One-time payment — no hidden charges</div>
           </div>
 
@@ -155,11 +171,11 @@ export default function SubscriptionPage() {
           )}
 
           <button
-            onClick={() => handleCheckout('trial')}
+            onClick={() => handleCheckout(isRenewal ? 'monthly' : 'trial')}
             disabled={loading}
             className="btn-primary w-full py-4 text-lg mb-3"
           >
-            {loading ? 'Redirecting to payment…' : 'Start My Transformation — $9'}
+            {loading ? 'Redirecting to payment…' : isRenewal ? 'Renew Access — $29' : 'Start My Transformation — $9'}
           </button>
 
           <div className="flex items-center justify-center gap-4 text-xs text-slate-500">

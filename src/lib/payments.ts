@@ -1,4 +1,4 @@
-export type PlanId = 'trial' | 'premium'
+export type PlanId = 'trial' | 'premium' | 'monthly'
 
 export interface CheckoutResult {
   url: string | null

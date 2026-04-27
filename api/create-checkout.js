@@ -5,7 +5,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { userId, email, successUrl, cancelUrl } = req.body
+  const { planId, userId, email, successUrl, cancelUrl } = req.body
+  const isRenewal = planId === 'monthly'
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -17,15 +18,17 @@ export default async function handler(req, res) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'FitCoach AI — 14-Day Access',
-              description: 'Full access to your personalized AI fitness program for 14 days',
+              name: isRenewal ? 'FitCoach AI — 30-Day Access' : 'FitCoach AI — 14-Day Access',
+              description: isRenewal
+                ? 'Full access to your personalized AI fitness program for 30 days'
+                : 'Full access to your personalized AI fitness program for 14 days',
             },
-            unit_amount: 900,
+            unit_amount: isRenewal ? 2900 : 900,
           },
           quantity: 1,
         },
       ],
-      metadata: { supabase_user_id: userId, plan_id: 'trial' },
+      metadata: { supabase_user_id: userId, plan_id: planId ?? 'trial' },
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,
     })

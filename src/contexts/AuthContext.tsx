@@ -58,13 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         const { data: rows, error } = await supabase
           .from('subscriptions')
-          .select('status')
+          .select('status, current_period_end')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(1)
         if (error) console.error('[checkSubscription] query error:', error.message)
-        const status = rows?.[0]?.status
-        setHasSubscription(status === 'active' || status === 'trial')
+        const row = rows?.[0]
+        const isActive = (row?.status === 'active' || row?.status === 'trial')
+          && (!row?.current_period_end || new Date(row.current_period_end) > new Date())
+        setHasSubscription(isActive)
       }
     } catch (e) {
       console.error('[checkSubscription] exception:', e)
