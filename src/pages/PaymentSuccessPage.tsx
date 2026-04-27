@@ -17,36 +17,51 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     if (!user) return
 
-    let attempts = 0
+    const sessionId = new URLSearchParams(window.location.search).get('session_id')
 
-    const poll = async () => {
-      attempts++
-
-      const { data } = await supabase
-        .from('subscriptions')
-        .select('status, plan')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (data?.status === 'active' || data?.status === 'trial') {
-        // Subscription confirmed in DB — provision user data
-        setStatus('activating')
-        await provisionUserData()
-        setHasSubscription(true)
-        setStatus('done')
-        setTimeout(() => navigate('/dashboard'), 1500)
-        return
+    if (sessionId) {
+      // Stripe redirect — verify payment via API route
+      const verify = async () => {
+        try {
+          const res = await fetch(`/api/verify-payment?session_id=${sessionId}`)
+          const { paid } = await res.json()
+          if (paid) {
+            setStatus('activating')
+            await provisionUserData()
+            setHasSubscription(true)
+            setStatus('done')
+            setTimeout(() => navigate('/dashboard'), 1500)
+          } else {
+            setStatus('timeout')
+          }
+        } catch {
+          setStatus('timeout')
+        }
       }
-
-      if (attempts >= MAX_POLLS) {
-        setStatus('timeout')
-        return
+      verify()
+    } else {
+      // Fallback: poll Supabase (test mode / manual activation)
+      let attempts = 0
+      const poll = async () => {
+        attempts++
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('status, plan')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (data?.status === 'active' || data?.status === 'trial') {
+          setStatus('activating')
+          await provisionUserData()
+          setHasSubscription(true)
+          setStatus('done')
+          setTimeout(() => navigate('/dashboard'), 1500)
+          return
+        }
+        if (attempts >= MAX_POLLS) { setStatus('timeout'); return }
+        setTimeout(poll, 2000)
       }
-
-      setTimeout(poll, 2000)
+      poll()
     }
-
-    poll()
   }, [user])
 
   const provisionUserData = async () => {
