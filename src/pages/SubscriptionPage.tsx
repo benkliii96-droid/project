@@ -160,8 +160,8 @@ export default function SubscriptionPage() {
 
           <div className="text-center py-4">
             <div className="text-5xl font-black gradient-text mb-2">{isRenewal ? '$29' : '$9'}</div>
-            <div className="text-slate-400 text-sm mb-1">30-day full access</div>
-            <div className="text-slate-500 text-xs">One-time payment — no hidden charges</div>
+            <div className="text-slate-400 text-sm mb-1">{isRenewal ? '30-day full access' : '14-day full access'}</div>
+            <div className="text-slate-500 text-xs">{isRenewal ? 'One-time payment — no hidden charges' : 'Then $29/month to continue'}</div>
           </div>
 
           {error && (
