@@ -33,11 +33,15 @@ function useCountdown(seconds: number) {
 
 export default function SubscriptionPage() {
   const navigate = useNavigate()
-  const { user, setHasSubscription } = useAuth()
+  const { user, subChecked, hasSubscription, setHasSubscription } = useAuth()
   const { h, m, s } = useCountdown(ONE_HOUR)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const quizData = JSON.parse(localStorage.getItem('quiz_data') || '{}')
+
+  useEffect(() => {
+    if (subChecked && hasSubscription) navigate('/dashboard', { replace: true })
+  }, [subChecked, hasSubscription])
 
   const handleCheckout = async (planId: PlanId) => {
     if (!user) return
