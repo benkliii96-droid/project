@@ -219,17 +219,6 @@ export default function SubscriptionPage() {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center">
-          <div className="text-slate-600 text-xs mb-3">— or —</div>
-          <button
-            onClick={activateMock}
-            disabled={loading}
-            className="w-full py-3 rounded-xl border border-dashed border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-500 text-sm transition-all duration-200"
-          >
-            Skip Payment — Test Mode (No card required)
-          </button>
-          <p className="text-slate-600 text-xs mt-2">All features unlocked for testing purposes</p>
-        </motion.div>
       </div>
     </div>
   )
