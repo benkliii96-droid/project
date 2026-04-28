@@ -116,6 +116,7 @@ export default function ProfilePage() {
   const [quizData, setQuizData] = useState<Partial<QuizData> | null>(null)
   const [stats, setStats] = useState<ProfileStats>({ totalWorkouts: 0, streak: 0, totalMinutes: 0, memberSince: null })
   const [loading, setLoading] = useState(true)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   // Name editing state
   const [editingName, setEditingName] = useState(false)
@@ -166,6 +167,24 @@ export default function ProfilePage() {
   const [pwLoading, setPwLoading] = useState(false)
   const [pwStatus, setPwStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [pwError, setPwError] = useState('')
+
+  const handleManageSubscription = async () => {
+    if (!user) return
+    setPortalLoading(true)
+    try {
+      const res = await fetch('/api/customer-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, returnUrl: window.location.href }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch (e) {
+      console.error('Portal error:', e)
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   const handleChangePassword = async () => {
     setPwError('')
@@ -414,6 +433,21 @@ export default function ProfilePage() {
             value={hasSubscription ? 'Active Subscription' : 'No active plan'}
             icon={<Star size={14} />}
           />
+          {hasSubscription && (
+            <div className="py-3 border-b border-surface-border">
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors font-medium disabled:opacity-50"
+              >
+                {portalLoading
+                  ? <div className="w-3.5 h-3.5 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
+                  : <X size={14} />
+                }
+                {portalLoading ? 'Opening portal…' : 'Cancel subscription'}
+              </button>
+            </div>
+          )}
           <div className="py-3">
             <button
               onClick={() => { setPwOpen(o => !o); setPwStatus('idle'); setPwError('') }}
