@@ -43,11 +43,14 @@ export default async function handler(req, res) {
         const userId = obj.metadata?.supabase_user_id
         if (!userId) break
         const sub = await stripe.subscriptions.retrieve(obj.subscription)
+        const periodEnd = sub.current_period_end
+          ? new Date(sub.current_period_end * 1000).toISOString()
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
         await supabase.from('subscriptions').upsert({
           user_id: userId,
           plan: 'monthly',
           status: 'active',
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          current_period_end: periodEnd,
           stripe_customer_id: String(sub.customer),
           stripe_subscription_id: sub.id,
         }, { onConflict: 'user_id' })
@@ -60,11 +63,14 @@ export default async function handler(req, res) {
         const sub = await stripe.subscriptions.retrieve(obj.subscription)
         const userId = sub.metadata?.supabase_user_id
         if (!userId) break
+        const periodEnd2 = sub.current_period_end
+          ? new Date(sub.current_period_end * 1000).toISOString()
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
         await supabase.from('subscriptions').upsert({
           user_id: userId,
           plan: 'monthly',
           status: 'active',
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          current_period_end: periodEnd2,
           stripe_customer_id: String(sub.customer),
           stripe_subscription_id: sub.id,
         }, { onConflict: 'user_id' })

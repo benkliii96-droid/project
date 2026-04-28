@@ -22,11 +22,14 @@ export default async function handler(req, res) {
     const userId = session.metadata?.supabase_user_id
     if (userId && session.subscription) {
       const sub = await stripe.subscriptions.retrieve(session.subscription)
+      const periodEnd = sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('subscriptions').upsert({
         user_id: userId,
         plan: 'monthly',
         status: 'active',
-        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        current_period_end: periodEnd,
         stripe_customer_id: String(sub.customer),
         stripe_subscription_id: sub.id,
       }, { onConflict: 'user_id' })
