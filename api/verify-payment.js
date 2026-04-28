@@ -19,7 +19,19 @@ export default async function handler(req, res) {
 
     if (!paid) return res.status(200).json({ paid: false })
 
-    // Webhook handles DB write — just confirm payment is good
+    const userId = session.metadata?.supabase_user_id
+    if (userId && session.subscription) {
+      const sub = await stripe.subscriptions.retrieve(session.subscription)
+      await supabase.from('subscriptions').upsert({
+        user_id: userId,
+        plan: 'monthly',
+        status: 'active',
+        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        stripe_customer_id: String(sub.customer),
+        stripe_subscription_id: sub.id,
+      }, { onConflict: 'user_id' })
+    }
+
     res.status(200).json({ paid: true })
   } catch (err) {
     console.error('[verify-payment]', err.message)
