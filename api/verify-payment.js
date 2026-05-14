@@ -35,7 +35,11 @@ export default async function handler(req, res) {
       }, { onConflict: 'user_id' })
     }
 
-    res.status(200).json({ paid: true })
+    const amountTotal =
+      typeof session.amount_total === 'number' ? session.amount_total / 100 : null
+    const currency = (session.currency || 'usd').toUpperCase()
+
+    res.status(200).json({ paid: true, amountTotal, currency })
   } catch (err) {
     console.error('[verify-payment]', err.message)
     res.status(500).json({ error: err.message })

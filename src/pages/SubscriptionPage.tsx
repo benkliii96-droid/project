@@ -5,6 +5,7 @@ import { CircleCheck as CheckCircle, Clock, Dumbbell, Brain, Utensils, TrendingU
 import { useAuth } from '../contexts/AuthContext'
 import { payments, type PlanId } from '../lib/payments'
 import { supabase } from '../lib/supabase'
+import { trackMetaLead } from '../lib/metaPixel'
 
 const ONE_HOUR = 60 * 60
 
@@ -41,6 +42,13 @@ export default function SubscriptionPage() {
   useEffect(() => {
     if (subChecked && hasSubscription) navigate('/dashboard', { replace: true })
   }, [subChecked, hasSubscription])
+
+  useEffect(() => {
+    if (sessionStorage.getItem('fitcoach_meta_lead') === '1') {
+      sessionStorage.removeItem('fitcoach_meta_lead')
+      trackMetaLead()
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return

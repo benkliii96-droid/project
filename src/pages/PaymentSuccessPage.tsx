@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CircleCheck as CheckCircle, Loader2 } from 'lucide-react'
@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { generateWorkoutPlanAI } from '../lib/openai'
 import { generateWorkoutPlan, generateWeekMealPlans } from '../lib/mockData'
+import { META_PURCHASE_FALLBACK_USD, trackMetaPurchase } from '../lib/metaPixel'
 
 const MAX_POLLS = 12 // 12 × 2 s = 24 s
 
@@ -13,6 +14,13 @@ export default function PaymentSuccessPage() {
   const navigate = useNavigate()
   const { user, setHasSubscription } = useAuth()
   const [status, setStatus] = useState<'polling' | 'activating' | 'done' | 'timeout'>('polling')
+  const purchaseTracked = useRef(false)
+
+  const firePurchaseOnce = (value: number, currency: string) => {
+    if (purchaseTracked.current) return
+    purchaseTracked.current = true
+    trackMetaPurchase(value, currency)
+  }
 
   useEffect(() => {
     if (!user) return
@@ -31,6 +39,12 @@ export default function PaymentSuccessPage() {
             return
           }
           if (data.paid) {
+            const amount =
+              typeof data.amountTotal === 'number' && data.amountTotal > 0
+                ? data.amountTotal
+                : META_PURCHASE_FALLBACK_USD
+            const currency = typeof data.currency === 'string' ? data.currency : 'USD'
+            firePurchaseOnce(amount, currency)
             setStatus('activating')
             await provisionUserData()
             setHasSubscription(true)
@@ -56,6 +70,7 @@ export default function PaymentSuccessPage() {
           .eq('user_id', user.id)
           .maybeSingle()
         if (data?.status === 'active' || data?.status === 'trial') {
+          firePurchaseOnce(META_PURCHASE_FALLBACK_USD, 'USD')
           setStatus('activating')
           await provisionUserData()
           setHasSubscription(true)

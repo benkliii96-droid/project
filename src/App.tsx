@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { trackMetaPageView } from './lib/metaPixel'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { QuizProvider } from './contexts/QuizContext'
 import LandingPage from './pages/LandingPage'
@@ -16,6 +18,20 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import RefundPage from './pages/RefundPage'
+
+/** SPA route changes: PageView (initial load already sent from index.html). */
+function MetaPixelPageViews() {
+  const location = useLocation()
+  const isFirst = useRef(true)
+  useEffect(() => {
+    if (isFirst.current) {
+      isFirst.current = false
+      return
+    }
+    trackMetaPageView()
+  }, [location.pathname])
+  return null
+}
 
 function ProtectedRoute({ children, requireSub = true }: { children: React.ReactNode; requireSub?: boolean }) {
   const { user, loading, subChecked, hasSubscription } = useAuth()
@@ -71,6 +87,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <MetaPixelPageViews />
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>

@@ -58,6 +58,7 @@ export default function RegisterPage() {
         if (err) { setError(err.message); return }
         const { data: { user } } = await supabase.auth.getUser()
         if (user) await saveQuizData(user.id)
+        sessionStorage.setItem('fitcoach_meta_lead', '1')
       } else {
         const { error: err } = await signIn(email, password)
         if (err) { setError(err.message); return }
